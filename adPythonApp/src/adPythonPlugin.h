@@ -4,11 +4,16 @@
 #include "Python.h"
 #include "NDPluginDriver.h"
 
+// Max number of user parameters in a subclass
 #define NUSERPARAMS 100
+
+// Number of characters in a big buffer
+#define BIGBUFFER 1000
 
 class adPythonPlugin : public NDPluginDriver {
 public:
-	adPythonPlugin(const char *portName, int queueSize, int blockingCallbacks,
+	adPythonPlugin(const char *portName, const char *filename,
+                   const char *classname, int queueSize, int blockingCallbacks,
 				   const char *NDArrayPort, int NDArrayAddr, int maxBuffers, size_t maxMemory,
 				   int priority, int stackSize, int numParams);
 	~adPythonPlugin();
@@ -35,8 +40,7 @@ protected:
 private:
     /** Load python file at pth, and create an instance of cls*/
     asynStatus makePythonInstance(const char* pth, const char* cls);
-    PyObject *pCapsule;
-    PyObject *pInstance;
+    PyObject *pCapsule, *pInstance, *pMain, *pMainDict;
     int initialised;
     int nextParam;
 };

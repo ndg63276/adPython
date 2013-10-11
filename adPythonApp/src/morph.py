@@ -13,7 +13,7 @@ class morph(AdPythonBase):
         ksize = self["ksize"]
         self.element = cv2.getStructuringElement(cv2.MORPH_OPEN, (ksize, ksize))
         
-    def processArray(self, arr):
+    def processArray(self, arr, attr):
         # got a new image to process
         dest = cv2.morphologyEx(arr, cv2.MORPH_ELLIPSE, self.element, iterations=self["iters"])
         print dest[0][0:4]

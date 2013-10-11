@@ -62,11 +62,11 @@ class AdPythonPlugin(object):
 
     # called when parameter list changes
     def paramChanged(self):
-        pass
+        raise NotImplementedError
     
     # called when a new array is generated
-    def processArray(self, arr):
-        pass
+    def processArray(self, arr, attr):
+        raise NotImplementedError
         
     # called when run offline
     def runOffline(self):
