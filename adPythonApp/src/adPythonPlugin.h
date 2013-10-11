@@ -15,7 +15,7 @@ public:
 	adPythonPlugin(const char *portName, const char *filename,
                    const char *classname, int queueSize, int blockingCallbacks,
 				   const char *NDArrayPort, int NDArrayAddr, int maxBuffers, size_t maxMemory,
-				   int priority, int stackSize, int numParams);
+				   int priority, int stackSize);
 	~adPythonPlugin();
     /** This is called when the plugin gets a new array callback */
     virtual void processCallbacks(NDArray *pArray);

@@ -20,12 +20,17 @@
 # CONFIG_SITE file.
 
 TEMPLATE_TOP=$(EPICS_BASE)/templates/makeBaseApp/top
+SUPPORT=/dls_sw/prod/R3.14.12.3/support
+WORK=/dls_sw/work/R3.14.12.3/support
 
 # If using the sequencer, point SNCSEQ at its top directory:
 #SNCSEQ=$(EPICS_BASE)/../modules/soft/seq
+ASYN=$(SUPPORT)/asyn/4-21
+AREADETECTOR=$(SUPPORT)/areaDetector/1-9dls4
+PYTHON=/dls_sw/prod/tools/RHEL6-x86_64/Python/2-7-3/prefix
 
 # EPICS_BASE usually appears last so other apps can override stuff:
-EPICS_BASE=/dls_sw/epics/R3.14.11/base
+EPICS_BASE=/dls_sw/epics/R3.14.12.3/base
 
 # Set RULES here if you want to take build rules from somewhere
 # other than EPICS_BASE:

@@ -454,3 +454,43 @@ void adPythonPlugin::processArray() {
     this->updateParams(0);
 }           
 
+/* EPICS iocsh shell commands */
+static const iocshArg initArg0 = { "portName",iocshArgString};
+static const iocshArg initArg1 = { "filename",iocshArgString};
+static const iocshArg initArg2 = { "classname",iocshArgString};
+static const iocshArg initArg3 = { "frame queue size",iocshArgInt};
+static const iocshArg initArg4 = { "blocking callbacks",iocshArgInt};
+static const iocshArg initArg5 = { "NDArrayPort",iocshArgString};
+static const iocshArg initArg6 = { "NDArrayAddr",iocshArgInt};
+static const iocshArg initArg7 = { "maxBuffers",iocshArgInt};
+static const iocshArg initArg8 = { "maxMemory",iocshArgInt};
+static const iocshArg initArg9 = { "priority",iocshArgInt};
+static const iocshArg initArg10 = { "stackSize",iocshArgInt};
+static const iocshArg * const initArgs[] = {&initArg0,
+                                            &initArg1,
+                                            &initArg2,
+                                            &initArg3,
+                                            &initArg4,
+                                            &initArg5,
+                                            &initArg6,
+                                            &initArg7,
+                                            &initArg8,
+                                            &initArg9,
+                                            &initArg10};
+static const iocshFuncDef initFuncDef = {"adPythonPluginConfigure",11,initArgs};
+static void initCallFunc(const iocshArgBuf *args)
+{
+	adPythonPluginConfigure(args[0].sval, args[1].sval, args[2].sval, 
+	                   args[3].ival, args[4].ival,
+                       args[5].sval, args[6].ival, args[7].ival,
+                       args[8].ival, args[9].ival, args[10].ival);
+}
+
+extern "C" void adPythonPluginRegister(void)
+{
+    iocshRegister(&initFuncDef,initCallFunc);
+}
+
+extern "C" {
+epicsExportRegistrar(adPythonPluginRegister);
+}
