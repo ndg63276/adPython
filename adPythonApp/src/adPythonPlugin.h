@@ -8,7 +8,7 @@
 #define NUSERPARAMS 100
 
 // Number of characters in a big buffer
-#define BIGBUFFER 1000
+#define BIGBUFFER 10000
 
 class adPythonPlugin : public NDPluginDriver {
 public:
@@ -23,8 +23,8 @@ public:
     virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
     /** This is when we get a new float value */
     virtual asynStatus writeFloat64(asynUser *pasynUser, epicsFloat64 value);
-    /** CreateParam to be called from python that does error checking */
-    virtual asynStatus createParam(const char *name, asynParamType type, int *index);
+    /** This is when we get a new string value */
+    virtual asynStatus writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual);
         
 protected:
     /** These are the values of our parameters */
@@ -38,11 +38,14 @@ protected:
     int adPythonUserParams[NUSERPARAMS];
 
 private:
-    /** Load python file at pth, and create an instance of cls*/
-    asynStatus makePythonInstance(const char* pth, const char* cls);
-    PyObject *pCapsule, *pInstance, *pMain, *pMainDict;
-    int initialised;
+    asynStatus makePythonInstance();
+    asynStatus updateDict();
+    asynStatus updateParams(int atinit);
+    void processArray();
+    
+    PyObject *pInstance, *pParams, *pProcessArray, *pParamChanged, *pMain, *pMainDict;
     int nextParam;
+    NDArray *lastArray;
 };
 
 #endif
