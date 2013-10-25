@@ -1,3 +1,6 @@
+from pkg_resources import require
+require("numpy")
+
 class AdPythonPlugin(object):   
     # Will be our param dict
     _params = None
@@ -43,8 +46,8 @@ class AdPythonPlugin(object):
         cv2.namedWindow('result')
 
         # prepare input image
-        fn = '/usr/share/doc/opencv-doc/examples/cpp/baboon.jpg'
-        src = cv2.imread(fn)
+        fn = '/home/tmc43/bwtest-sm.jpg'
+        src = cv2.imread(fn, 0)
         
         while True:
             # Change params
@@ -62,7 +65,7 @@ class AdPythonPlugin(object):
                 print "Invalid param name '%s'" % param
             
             # Run on image
-            result = self.newArray(src)
+            result = self.processArray(src, {})
             cv2.imshow('result', result)
             cv2.waitKey(500)
 

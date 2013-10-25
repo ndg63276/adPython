@@ -1,0 +1,30 @@
+# % macro, P, Device Prefix
+# % macro, R, Device Suffix
+# % macro, PORT, Asyn Port name
+# % macro, TIMEOUT, Timeout
+# % macro, ADDR, Asyn Port address
+# % gui, $(PORT), edmtab, adPythonMorph.edl, P=$(P),R=$(R)
+
+record(longin, "$(P)$(R)KSize_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))ksize")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)KSize") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))ksize")
+}
+
+record(longin, "$(P)$(R)Iters_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))iters")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)Iters") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))iters")
+}

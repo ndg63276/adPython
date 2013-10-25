@@ -3,6 +3,8 @@
 
 #include "Python.h"
 #include "NDPluginDriver.h"
+#include <iocsh.h>
+#include <epicsExport.h>
 
 // Max number of user parameters in a subclass
 #define NUSERPARAMS 100
@@ -38,14 +40,20 @@ protected:
     int adPythonUserParams[NUSERPARAMS];
 
 private:
+    asynStatus lookupNpyFormat(NDDataType_t ad_fmt, int *npy_fmt);
+    asynStatus lookupAdFormat(int npy_fmt, NDDataType_t *ad_fmt);
     asynStatus makePythonInstance();
     asynStatus updateDict();
     asynStatus updateParams(int atinit);
+    void do_processArray();
     void processArray();
     
     PyObject *pInstance, *pParams, *pProcessArray, *pParamChanged, *pMain, *pMainDict;
-    int nextParam;
+    NDAttributeList *pFileAttributes;
+    int nextParam, dictModified;
+    epicsMutexId dictMutex;
     NDArray *lastArray;
+    PyThreadState *mainThreadState;
 };
 
 #endif
