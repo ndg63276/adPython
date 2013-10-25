@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 417
-y 207
+x 421
+y 259
 w 390
 h 130
 font "arial-bold-r-12.0"
@@ -119,7 +119,7 @@ beginObjectProperties
 major 4
 minor 6
 release 0
-x 190
+x 185
 y 75
 w 100
 h 20
@@ -141,7 +141,7 @@ beginObjectProperties
 major 4
 minor 6
 release 0
-x 85
+x 80
 y 75
 w 100
 h 20
@@ -253,9 +253,9 @@ beginObjectProperties
 major 4
 minor 1
 release 0
-x 295
+x 290
 y 75
-w 85
+w 65
 h 20
 fgColor index 19
 onColor index 4
@@ -269,5 +269,60 @@ offLabel "Read File"
 3d
 useEnumNumeric
 font "arial-bold-r-12.0"
+endObjectProperties
+
+# (Byte)
+object ByteClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 360
+y 75
+w 20
+h 20
+controlPv "$(P)$(R)ReadFile_RBV"
+lineColor index 14
+onColor index 15
+offColor index 19
+numBits 1
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 225
+y 100
+w 85
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Plugin status"
+}
+endObjectProperties
+
+# (Textupdate)
+object TextupdateClass
+beginObjectProperties
+major 10
+minor 0
+release 0
+x 310
+y 100
+w 70
+h 20
+controlPv "$(P)$(R)Good_RBV"
+fgColor index 16
+fgAlarm
+bgColor index 10
+fill
+font "arial-bold-r-12.0"
+fontAlign "center"
 endObjectProperties
 

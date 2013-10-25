@@ -19,21 +19,18 @@ class morph(AdPythonPlugin):
     def __init__(self):
         params = dict(ksize = 3, operation = 1, iters = 1)
         AdPythonPlugin.__init__(self, params)
-        # Override the parent class definition of the user logging
-        # A default logger has been provided in the base-class but it's probably
-        # useful to override it with a more accurately named one, like this.
         
     def paramChanged(self):
         # one of our input parameters has changed
         ksize = self["ksize"]
         self.element = cv2.getStructuringElement(cv2.MORPH_OPEN, (ksize, ksize))
-        self.log.info('Changed parameter, ksize=%s', str(ksize))
+        self.log.info('Creating structuring element with ksize=%s', ksize)
 
     def processArray(self, arr, attr):
         # got a new image to process
         operation = self["operation"]
         ksize = self["ksize"]
-        self.log.debug("kisze=%s operation=%d", str(ksize), operation)
+        self.log.debug("ksize=%s, operation=%s", ksize, operation)
         if operation < MORPH_BLUR:
             # Morphological filter
             dest = cv2.morphologyEx(arr, operation, self.element, iterations=self["iters"])

@@ -7,27 +7,29 @@ except:
     pass
 
 import os, logging
+
 #logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s:  %(message)s', level=logging.INFO)
 #logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s  %(filename)s:%(lineno)d %(funcName)s():  %(message)s', level=logging.INFO)
 #logging.basicConfig(format='%(asctime)s %(levelname)8s %(filename)20s:%(lineno)d %(funcName)16s():  %(message)s', level=logging.INFO)
-logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s  %(filename)s:%(lineno)d:  %(message)s', level=logging.INFO)
-log = logging.getLogger(__name__)
+logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)10s %(filename)s:%(lineno)d:  %(message)s', level=logging.INFO)
 
 # define a helper function that imports a python filename and returns an 
 # instance of classname which is contained in it
-def makePythonInstance(filename, classname):
+def makePyInst(portname, filename, classname):
     import imp
+    log = logging.getLogger(portname)
+    log.info("Creating %s:%s with portname %s", filename, classname, portname)
     try:
         f = open(filename)
         pymodule, ext = os.path.splitext(os.path.basename(filename))
         mod = imp.load_module(pymodule, f, filename, (ext, 'U', 1))
         f.close()
         inst = getattr(mod, classname)()
-        inst.log = logging.getLogger(".".join([pymodule, classname]))
+        inst.log = log
         inst.paramChanged()
         return inst
     except Exception, e:
-        log.exception( "Creating %s:%s threw exception", filename, classname )
+        log.exception("Creating %s:%s threw exception", filename, classname)
 
 
 class AdPythonPlugin(object):   
@@ -36,8 +38,6 @@ class AdPythonPlugin(object):
     
     # init our param dict
     def __init__(self, params={}):
-        # Parent class logger
-        self._log = logging.getLogger(".".join([__name__, self.__class__.__name__]))
         self._params = dict(params)
 
     # get a param value
@@ -63,12 +63,20 @@ class AdPythonPlugin(object):
         return repr(self._params)
 
     # called when parameter list changes
-    def paramChanged(self):
-        raise NotImplementedError
+    def _paramChanged(self):
+        try:
+            return self.paramChanged()
+        except:
+            self.log.exception("Error calling paramChanged()")
+            raise
     
     # called when a new array is generated
-    def processArray(self, arr, attr):
-        raise NotImplementedError
+    def _processArray(self, arr, attr):
+        try:
+            return self.processArray(arr, attr)
+        except:
+            self.log.exception("Error calling processArray()")
+            raise
         
     # called when run offline
     def runOffline(self):
@@ -88,12 +96,12 @@ class AdPythonPlugin(object):
                 val = raw_input("Param value? ")
                 try:
                     self[param] = typ(val)
-                except Exception, e:
+                except:
                     # The exception information is automatically added 
                     # to a Logger.exception() msg
-                    self._log.exception("Cannot convert '%s' to %s", val, typ) 
+                    self.log.exception("Cannot convert '%s' to %s", val, typ) 
             elif param:
-                self._log.warning("Invalid param name '%s'", param )
+                self.log.warning("Invalid param name '%s'", param)
             
             # Run on image
             result = self.processArray(src, {})
