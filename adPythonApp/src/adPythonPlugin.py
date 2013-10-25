@@ -6,19 +6,29 @@ try:
 except:
     pass
 
+import os, logging
+#logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s:  %(message)s', level=logging.INFO)
+#logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s  %(filename)s:%(lineno)d %(funcName)s():  %(message)s', level=logging.INFO)
+#logging.basicConfig(format='%(asctime)s %(levelname)8s %(filename)20s:%(lineno)d %(funcName)16s():  %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s  %(filename)s:%(lineno)d:  %(message)s', level=logging.INFO)
+log = logging.getLogger(__name__)
+
 # define a helper function that imports a python filename and returns an 
 # instance of classname which is contained in it
 def makePythonInstance(filename, classname):
     import imp
     try:
         f = open(filename)
-        mod = imp.load_module('%s', f, filename, ('.py', 'U', 1))
+        pymodule, ext = os.path.splitext(os.path.basename(filename))
+        mod = imp.load_module(pymodule, f, filename, (ext, 'U', 1))
         f.close()
         inst = getattr(mod, classname)()
+        inst.log = logging.getLogger(".".join([pymodule, classname]))
         inst.paramChanged()
         return inst
     except Exception, e:
-        print "Creating %s:%s threw exception %s" % (filename, classname, e)
+        log.exception( "Creating %s:%s threw exception", filename, classname )
+
 
 class AdPythonPlugin(object):   
     # Will be our param dict
@@ -26,6 +36,8 @@ class AdPythonPlugin(object):
     
     # init our param dict
     def __init__(self, params={}):
+        # Parent class logger
+        self._log = logging.getLogger(".".join([__name__, self.__class__.__name__]))
         self._params = dict(params)
 
     # get a param value
@@ -69,7 +81,7 @@ class AdPythonPlugin(object):
         
         while True:
             # Change params
-            print "Params: %s" % self
+            self._log.info( "Params: %s", self )
             param = raw_input("Param name to change (return to process image)? ")
             if param in self:
                 typ = type(self[param])
@@ -77,10 +89,11 @@ class AdPythonPlugin(object):
                 try:
                     self[param] = typ(val)
                 except Exception, e:
-                    print "Cannot convert '%s' to %s" % (val, typ)
-                    print e
+                    # The exception information is automatically added 
+                    # to a Logger.exception() msg
+                    self._log.exception("Cannot convert '%s' to %s", val, typ) 
             elif param:
-                print "Invalid param name '%s'" % param
+                self._log.warning("Invalid param name '%s'", param )
             
             # Run on image
             result = self.processArray(src, {})
