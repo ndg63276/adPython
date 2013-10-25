@@ -1,19 +1,13 @@
-#define PYTHON_USE_NUMPY
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-
 /* Nasty nasty hack so that Python.h is happy. */
 #undef _POSIX_C_SOURCE
 #undef _XOPEN_SOURCE
 #define _POSIX_C_SOURCE 200112L
 #define _XOPEN_SOURCE 600
 #include <Python.h>
-
-//#define MODULESTR "cv2"
+#define PYTHON_USE_NUMPY
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarrayobject.h"
-//#include "opencv2/opencv.hpp"
 #include <stdio.h>
-//using namespace cv;
-//using namespace std;
 #include <libgen.h>
 #include <epicsTime.h>
 #include "NDArray.h"
@@ -21,18 +15,17 @@
 
 const char *driverName = "adPythonPlugin";
 
-adPythonPlugin::adPythonPlugin(const char *portName, const char *filename,
+adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
                    const char *classname, int queueSize, int blockingCallbacks,
                    const char *NDArrayPort, int NDArrayAddr, int maxBuffers, size_t maxMemory,
                    int priority, int stackSize)
-    : NDPluginDriver(portName, queueSize, blockingCallbacks,
+    : NDPluginDriver(portNameArg, queueSize, blockingCallbacks,
                        NDArrayPort, NDArrayAddr, 1, NUM_ADPYTHONPLUGIN_PARAMS, maxBuffers, maxMemory,
                        asynGenericPointerMask|asynFloat64ArrayMask,
                        asynGenericPointerMask|asynFloat64ArrayMask,
                        ASYN_MULTIDEVICE, 1, priority, stackSize)
 {
     // Initialise some params
-    static const char *functionName = "adPythonPlugin";
     this->pInstance = NULL;
     this->pProcessArray = NULL;
     this->pParamChanged = NULL;
@@ -44,7 +37,7 @@ adPythonPlugin::adPythonPlugin(const char *portName, const char *filename,
     /* Create the epicsMutex for locking access to data structures from other threads */
     this->dictMutex = epicsMutexCreate();
     if (!this->dictMutex) {
-        printf("%s::%s ERROR: epicsMutexCreate failure\n", driverName, functionName);
+        printf("%s::%s ERROR: epicsMutexCreate failure\n", driverName, __func__);
         return;
     }
     
@@ -78,7 +71,7 @@ adPythonPlugin::adPythonPlugin(const char *portName, const char *filename,
     if (this->pMain == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get __main__ module\n",
-            driverName, functionName);
+            driverName, __func__);
         PyGILState_Release(state);
         return;
     }
@@ -86,7 +79,7 @@ adPythonPlugin::adPythonPlugin(const char *portName, const char *filename,
     if (this->pMainDict == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get __main__ dict\n",
-            driverName, functionName);
+            driverName, __func__);
         PyGILState_Release(state);
         return;
     }
@@ -95,7 +88,7 @@ adPythonPlugin::adPythonPlugin(const char *portName, const char *filename,
     if (this->makePythonInstance()) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't make instance, user params not created\n",
-            driverName, functionName);   
+            driverName, __func__);   
         PyGILState_Release(state); 
         return;
     }
@@ -107,7 +100,7 @@ adPythonPlugin::adPythonPlugin(const char *portName, const char *filename,
     if (this->updateParams(1)) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't update params, user params not created\n",
-            driverName, functionName);    
+            driverName, __func__);    
         PyGILState_Release(state);
         return;    
     }    
@@ -121,7 +114,6 @@ adPythonPlugin::~adPythonPlugin() {
 
 /** Import the user class from the pathname and make an instance of it */
 asynStatus adPythonPlugin::makePythonInstance() {     
-    static const char *functionName = "makePythonInstance";
     char filename[BIGBUFFER], classname[BIGBUFFER], buffer[BIGBUFFER];
     printf("makePythonInstance\n");
     
@@ -129,7 +121,7 @@ asynStatus adPythonPlugin::makePythonInstance() {
     if (getStringParam(adPythonFilename, BIGBUFFER, filename)) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get filename\n",
-            driverName, functionName);
+            driverName, __func__);
         return asynError;
     }
     
@@ -137,7 +129,7 @@ asynStatus adPythonPlugin::makePythonInstance() {
     if (getStringParam(adPythonClassname, BIGBUFFER, classname)) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get classname\n",
-            driverName, functionName);
+            driverName, __func__);
         return asynError;
     }
 
@@ -154,7 +146,7 @@ asynStatus adPythonPlugin::makePythonInstance() {
     if (pRet == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't import user class\n",
-            driverName, functionName);
+            driverName, __func__);
         PyErr_PrintEx(0);
         return asynError;
     }
@@ -166,7 +158,7 @@ asynStatus adPythonPlugin::makePythonInstance() {
         Py_XDECREF(pCls);    
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get class name ref %s\n",
-            driverName, functionName, classname);
+            driverName, __func__, classname);
         PyErr_PrintEx(0);
         return asynError;
     }
@@ -178,7 +170,7 @@ asynStatus adPythonPlugin::makePythonInstance() {
     if (pInstance == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't make instance of class %s\n",
-            driverName, functionName, classname);
+            driverName, __func__, classname);
         PyErr_PrintEx(0);
         return asynError;
     }
@@ -189,7 +181,7 @@ asynStatus adPythonPlugin::makePythonInstance() {
     if (this->pProcessArray == NULL || !PyCallable_Check(this->pProcessArray)) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get processArray ref\n",
-            driverName, functionName);
+            driverName, __func__);
         PyErr_PrintEx(0);
         return asynError;
     } 
@@ -200,7 +192,7 @@ asynStatus adPythonPlugin::makePythonInstance() {
     if (this->pParamChanged == NULL || !PyCallable_Check(this->pParamChanged)) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get paramChanged ref\n",
-            driverName, functionName);
+            driverName, __func__);
         PyErr_PrintEx(0);
         return asynError;
     } 
@@ -211,7 +203,7 @@ asynStatus adPythonPlugin::makePythonInstance() {
     if (this->pParams == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get processArray ref\n",
-            driverName, functionName);
+            driverName, __func__);
         PyErr_PrintEx(0);
         return asynError;
     } 
@@ -221,14 +213,12 @@ asynStatus adPythonPlugin::makePythonInstance() {
 
 /** Update instance param dict from param list */
 asynStatus adPythonPlugin::updateDict() { 
-//     static const char *functionName = "updateDict";
-    static const char *functionName = "updateDict";
     // Create param key list
     PyObject *pKeys = PyDict_Keys(this->pParams);
     if (pKeys == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get keys of _param dict\n",
-            driverName, functionName);
+            driverName, __func__);
         return asynError;
     }
     
@@ -241,22 +231,22 @@ asynStatus adPythonPlugin::updateDict() {
         if (findParam(paramStr, &param)) {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: can't find param %s\n",
-                driverName, functionName, paramStr);    
+                driverName, __func__, paramStr);    
             continue;        
         }
-        PyObject *value = PyDict_GetItem(this->pParams, key);
-        if (PyFloat_Check(value)) {
+        PyObject *pValue = PyDict_GetItem(this->pParams, key);
+        if (PyFloat_Check(pValue)) {
             // get float param
             double value;
             getDoubleParam(param, &value);
             PyDict_SetItem(this->pParams, key, PyFloat_FromDouble(value));
-        } else if (PyInt_Check(value)) {
+        } else if (PyInt_Check(pValue)) {
             // get int param
             int value;
             getIntegerParam(param, &value);
             printf("Set %s %d\n", paramStr, value);
             PyDict_SetItem(this->pParams, key, PyInt_FromLong(value));
-        } else if (PyString_Check(value)) {
+        } else if (PyString_Check(pValue)) {
             // get string param
             char value[BIGBUFFER];
             getStringParam(param, BIGBUFFER, value);
@@ -264,7 +254,7 @@ asynStatus adPythonPlugin::updateDict() {
         } else {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: param %s is not an int, float or string\n",
-                driverName, functionName, paramStr);            
+                driverName, __func__, paramStr);            
         }
     }
     Py_DECREF(pKeys);
@@ -274,7 +264,7 @@ asynStatus adPythonPlugin::updateDict() {
     if (pRet == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: calling paramChanged failed\n",
-            driverName, functionName);      
+            driverName, __func__);      
         PyErr_PrintEx(0);
         return asynError;
     }   
@@ -285,13 +275,12 @@ asynStatus adPythonPlugin::updateDict() {
 
 /** Update param list from instance param dict */
 asynStatus adPythonPlugin::updateParams(int atinit) { 
-    static const char *functionName = "updateParams";
     // Create param key list
     PyObject *pKeys = PyDict_Keys(this->pParams);
     if (pKeys == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't get keys of _param dict\n",
-            driverName, functionName);
+            driverName, __func__);
         return asynError;
     }
     
@@ -306,7 +295,7 @@ asynStatus adPythonPlugin::updateParams(int atinit) {
             if (findParam(paramStr, &param)) {
                 asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                     "%s:%s: can't find param %s\n",
-                    driverName, functionName, paramStr);    
+                    driverName, __func__, paramStr);    
              continue;        
             }
         }
@@ -335,7 +324,7 @@ asynStatus adPythonPlugin::updateParams(int atinit) {
         } else {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: param %s is not an int, float or string\n",
-                driverName, functionName, paramStr);            
+                driverName, __func__, paramStr);            
         }
     }
     Py_DECREF(pKeys);
@@ -349,7 +338,6 @@ asynStatus adPythonPlugin::updateParams(int atinit) {
   * \param[in] pArray  The NDArray from the callback.
   */
 void adPythonPlugin::processCallbacks(NDArray *pArray) {
-    static const char *functionName = __func__;
     // First call the base class method
     NDPluginDriver::processCallbacks(pArray);
 
@@ -386,10 +374,9 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
 }
 
 asynStatus adPythonPlugin::writeInt32(asynUser *pasynUser, epicsInt32 value) {
-    static const char *functionName = "writeInt32";
     asynStatus status;
     int param = pasynUser->reason;
-    if (param == adPythonLoad || this->nextParam && param > adPythonUserParams[0]) {
+    if (param == adPythonLoad || (this->nextParam && param > adPythonUserParams[0])) {
         // We have to modify our python dict to match our param list
         // so unlock and wait until any dictionary access has finished
         epicsMutexLock(this->dictMutex);
@@ -416,7 +403,6 @@ asynStatus adPythonPlugin::writeInt32(asynUser *pasynUser, epicsInt32 value) {
 }
 
 asynStatus adPythonPlugin::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
-    static const char *functionName = "writeFloat64";
     asynStatus status;
     int param = pasynUser->reason;
     if (this->nextParam && param > adPythonUserParams[0]) {
@@ -440,7 +426,6 @@ asynStatus adPythonPlugin::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 }
 
 asynStatus adPythonPlugin::writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual) {
-    static const char *functionName = "writeOctet";
     asynStatus status;
     int param = pasynUser->reason;
     if (this->nextParam && param > adPythonUserParams[0]) {
@@ -503,8 +488,7 @@ asynStatus adPythonPlugin::lookupAdFormat(int npy_fmt, NDDataType_t *ad_fmt) {
 }
 
 void adPythonPlugin::processArray() {      
-    static const char *functionName = "processArray";
-    NDArrayInfo   arrayInfo;
+    NDArrayInfo arrayInfo;
     
     // Return if no array to operate on
     if (this->lastArray == NULL) return;
@@ -531,7 +515,7 @@ void adPythonPlugin::processArray() {
     if (lookupNpyFormat(this->lastArray->dataType, &npy_fmt)) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: can't lookup numpy format for dataType %d\n",
-                driverName, functionName, this->lastArray->dataType);
+                driverName, __func__, this->lastArray->dataType);
         return;
     }    
         
@@ -543,7 +527,7 @@ void adPythonPlugin::processArray() {
     if (pValue == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: Cannot make numpy array\n",
-                driverName, functionName);      
+                driverName, __func__);      
         PyGILState_Release(state);                
         return;
     }     
@@ -565,7 +549,7 @@ void adPythonPlugin::processArray() {
     if (pDict == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: Cannot make attribute dict\n",
-                driverName, functionName);      
+                driverName, __func__);      
         Py_DECREF(pValue);
         PyGILState_Release(state);                
         return;
@@ -611,7 +595,7 @@ void adPythonPlugin::processArray() {
         if (pObject == NULL) {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: attribute %s could not be put in attribute dict\n",
-                driverName, functionName, pAttr->pName);            
+                driverName, __func__, pAttr->pName);            
         } else {            
             PyDict_SetItemString(pDict, pAttr->pName, pObject); 
             Py_DECREF(pObject); 
@@ -625,7 +609,7 @@ void adPythonPlugin::processArray() {
     if (pArgs == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: Cannot build tuple for processArray()\n",
-                driverName, functionName);      
+                driverName, __func__);      
         Py_DECREF(pValue);
         Py_DECREF(pDict);
         PyGILState_Release(state);
@@ -638,22 +622,23 @@ void adPythonPlugin::processArray() {
     // Make the function call
     pValue = PyObject_CallObject(this->pProcessArray, pArgs);
     
+    Py_DECREF(pArgs);
+    if (pValue == NULL) {
+        Py_DECREF(pDict);
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:%s: processArray() call failed again\n",
+                driverName, __func__);      
+        PyErr_PrintEx(0);
+        PyGILState_Release(state);   
+        this->lock();       
+        return;
+    }
+
     // Lock back up
     PyGILState_Release(state);
     this->lock();
     state = PyGILState_Ensure();
-        
-    Py_DECREF(pArgs);
-    if (pValue == NULL) {
-        PyErr_Print();
-        Py_DECREF(pDict);
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: processArray() call failed\n",
-                driverName, functionName);      
-        PyGILState_Release(state);          
-        return;
-    }
-    
+           
     // Check return type
     if (!PyObject_IsInstance(pValue, reinterpret_cast<PyObject*>(&PyArray_Type))) {
         // wasn't an array
@@ -668,7 +653,7 @@ void adPythonPlugin::processArray() {
     if (lookupAdFormat(PyArray_TYPE(pValue), &ad_fmt)) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: can't lookup numpy format for dataType %d\n",
-                driverName, functionName, this->lastArray->dataType);
+                driverName, __func__, this->lastArray->dataType);
         PyGILState_Release(state);
         return;
     }       
@@ -684,7 +669,7 @@ void adPythonPlugin::processArray() {
     if (this->pArrays[0] == NULL) {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: error allocating buffer\n",
-                driverName, functionName);
+                driverName, __func__);
         PyGILState_Release(state);
         return;
     }
@@ -708,13 +693,13 @@ void adPythonPlugin::processArray() {
 
 
 /** Configuration routine.  Called directly, or from the iocsh function in NDFileEpics */
-static int adPythonPluginConfigure(const char *portName, const char *filename,
+static int adPythonPluginConfigure(const char *portNameArg, const char *filename,
                    const char *classname, int queueSize, int blockingCallbacks,
                    const char *NDArrayPort, int NDArrayAddr, int maxBuffers, size_t maxMemory,
                    int priority, int stackSize) {
     // Stack Size must be a minimum of 2MB
     if (stackSize < 2097152) stackSize = 2097152;
-    new adPythonPlugin(portName, filename,
+    new adPythonPlugin(portNameArg, filename,
                    classname, queueSize, blockingCallbacks,
                    NDArrayPort, NDArrayAddr, maxBuffers, maxMemory,
                    priority, stackSize);

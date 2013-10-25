@@ -28,15 +28,15 @@ class morph(AdPythonPlugin):
         # got a new image to process
         operation = self["operation"]
         ksize = self["ksize"]
-    	if operation < MORPH_BLUR:
-		    # Morphological filter
-		    dest = cv2.morphologyEx(arr, operation, self.element, iterations=self["iters"])
-	    elif operation == MORPH_BLUR:
-	        dest = cv2.blur(arr, ksize)
-	    elif operation == MORPH_GAUSSIAN_BLUR:
-		    dest = cv2.GaussianBlur(arr, ksize, 0);
-	    elif operation == MORPH_MEDIAN_BLUR:
-		    dest = cv2.medianBlur(arr, ksize);
+        if operation < MORPH_BLUR:
+            # Morphological filter
+            dest = cv2.morphologyEx(arr, operation, self.element, iterations=self["iters"])
+        elif operation == MORPH_BLUR:
+            dest = cv2.blur(arr, (ksize, ksize))
+        elif operation == MORPH_GAUSSIAN_BLUR:
+            dest = cv2.GaussianBlur(arr, (ksize, ksize), 0)
+        elif operation == MORPH_MEDIAN_BLUR:
+            dest = cv2.medianBlur(arr, ksize)
         return dest
 
 if __name__=="__main__":

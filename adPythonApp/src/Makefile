@@ -6,12 +6,14 @@ include $(TOP)/configure/CONFIG
 # Build an Diamond Support Module
 # -------------------------------
 
-# USR_CXXFLAGS += -Werror
+USR_CXXFLAGS += -Werror
 USR_CXXFLAGS += -Wall -Wextra
 USR_CXXFLAGS += -Wno-unused-parameter
 USR_CXXFLAGS += -Wno-missing-field-initializers
-USR_CXXFLAGS += -Wundef
-USR_CXXFLAGS += -Wshadow
+# Can't do this because of base/include/epicsTypes.h
+#USR_CXXFLAGS += -Wundef
+# Can't do this because of base/include/locationException.h
+#USR_CXXFLAGS += -Wshadow
 USR_CXXFLAGS += -Wcast-align
 USR_CXXFLAGS += -Wwrite-strings
 USR_CXXFLAGS += -Wredundant-decls
