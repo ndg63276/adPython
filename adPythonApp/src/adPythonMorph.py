@@ -1,4 +1,5 @@
 #!/usr/bin/env dls-python
+#!/usr/bin/env dls-ad-python
 from adPythonPlugin import AdPythonPlugin
 import cv2
 

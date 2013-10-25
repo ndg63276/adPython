@@ -30,7 +30,7 @@ class adPythonPlugin(_NDPluginBase):
             TemplateFile = "adPython%s.template" % classname.title()
         _tmp(**filter_dict(args, _tmp.ArgInfo.Names()))
         # Store the args
-        self.filename = "$(ADPYTHON)/data/adPython%s.py" % classname.title()
+        self.filename = "$(ADPYTHON)/adPythonApp/src/adPython%s.py" % classname.title()
         self.__dict__.update(locals())
 
     def Initialise(self):

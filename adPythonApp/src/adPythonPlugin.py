@@ -1,5 +1,24 @@
-from pkg_resources import require
-require("numpy")
+# our base class requires numpy, so make sure it's on the path here
+# this step is only needed if numpy is an egg installed multi-version
+try:
+    from pkg_resources import require
+    require("numpy")
+except:
+    pass
+
+# define a helper function that imports a python filename and returns an 
+# instance of classname which is contained in it
+def makePythonInstance(filename, classname):
+    import imp
+    try:
+        f = open(filename)
+        mod = imp.load_module('%s', f, filename, ('.py', 'U', 1))
+        f.close()
+        inst = getattr(mod, classname)()
+        inst.paramChanged()
+        return inst
+    except Exception, e:
+        print "Creating %s:%s threw exception %s" % (filename, classname, e)
 
 class AdPythonPlugin(object):   
     # Will be our param dict
@@ -8,7 +27,6 @@ class AdPythonPlugin(object):
     # init our param dict
     def __init__(self, params={}):
         self._params = dict(params)
-        self.paramChanged()
 
     # get a param value
     def __getitem__(self, param):

@@ -13,6 +13,13 @@
 #include "NDArray.h"
 #include "adPythonPlugin.h"
 
+#define ErrWithGIL(errString)                           \
+    asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,    \
+        "%s:%s: " errString "\n",                       \
+        driverName, __func__);                          \
+    PyErr_PrintEx(0);                                   \
+    PyGILState_Release(state)
+
 const char *driverName = "adPythonPlugin";
 
 adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
@@ -53,7 +60,7 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
     // First we tell python where to find adPythonPlugin.py
     char buffer[1024];
     snprintf(buffer, sizeof(buffer), "PYTHONPATH=%s", DATADIR);
-    //printf("%s\n", buffer);
+    printf("%s\n", buffer);
     putenv(buffer);
     
     // Now we initialise python
@@ -61,49 +68,38 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
     Py_Initialize();
     
     // Be sure to save thread state otherwise other thread's PyGILState_Ensure()
-    // calls will hang
+    // calls will hang. This releases the GIL
     this->mainThreadState = PyEval_SaveThread();
     
+    // Make sure we have the GIL again
     PyGILState_STATE state = PyGILState_Ensure();
 
-    // Import the main dict
-    this->pMain = PyImport_AddModule("__main__");
-    if (this->pMain == NULL) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: can't get __main__ module\n",
-            driverName, __func__);
-        PyGILState_Release(state);
+    // Import the adPython module
+    PyObject *pAdPython = PyImport_ImportModule("adPythonPlugin");
+    if (pAdPython == NULL) {
+        ErrWithGIL("Can't import adPythonPlugin");
         return;
-    }
-    this->pMainDict = PyModule_GetDict(this->pMain);
-    if (this->pMainDict == NULL) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: can't get __main__ dict\n",
-            driverName, __func__);
-        PyGILState_Release(state);
+    }    
+
+    // Try and init numpy, needs to be done here as adPythonPlugin might have
+    // to put it on our path
+    import_array();
+      
+    // Get the reference for the makePythonInstance python function
+    this->pMakePythonObject = PyObject_GetAttrString(pAdPython, "makePythonInstance");
+    //Py_DECREF(pAdPython);
+    if ((this->pMakePythonObject == NULL) || !PyCallable_Check(this->pMakePythonObject)) {
+        ErrWithGIL("Can't get makePythonInstance ref");
         return;
-    }
+    }     
     
     // Try and make an instance of this
-    if (this->makePythonInstance()) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: can't make instance, user params not created\n",
-            driverName, __func__);   
-        PyGILState_Release(state); 
-        return;
-    }
-    
-    // Try and init numpy, this might fail if we didn't get a valid user program
-    import_array();
-    
+    this->makePythonInstance();
+        
     // Update param list from dict, also creating keys
-    if (this->updateParams(1)) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: can't update params, user params not created\n",
-            driverName, __func__);    
-        PyGILState_Release(state);
-        return;    
-    }    
+    this->updateParamList(1);
+    
+    // Release the GIL and finish
     PyGILState_Release(state);
 }
 
@@ -112,9 +108,130 @@ adPythonPlugin::~adPythonPlugin() {
     Py_Finalize();
 }
 
+/** Callback function that is called by the NDArray driver with new NDArray data.
+  * Does image statistics.
+  * \param[in] pArray  The NDArray from the callback.
+  */
+void adPythonPlugin::processCallbacks(NDArray *pArray) {
+    // First call the base class method
+    NDPluginDriver::processCallbacks(pArray);
+
+    // Store the input array so we can reproduce it
+    if (this->lastArray) this->lastArray->release();
+    pArray->reserve();
+    this->lastArray = pArray;
+   
+    // Process the NDArray
+    this->processArray();
+
+    // We have to modify our python dict to match our param list
+    // so unlock and wait until any dictionary access has finished
+    epicsMutexLock(this->dictMutex);
+    if (this->dictModified) {
+        // CA takes priority in dict writes
+        this->dictModified = 0;
+    } else {
+        // Make sure we're allowed to use the python API
+        PyGILState_STATE state = PyGILState_Ensure();
+        // update param list, this will callParamCallbacks at the end
+        this->updateParamList(0);    
+        // release GIL and dict Mutex
+        PyGILState_Release(state);
+    }
+    epicsMutexUnlock(this->dictMutex);
+    
+    // Spit out the array
+    if (this->pArrays[0]) {
+        this->unlock();
+        doCallbacksGenericPointer(this->pArrays[0], NDArrayData, 0);
+        this->lock();    
+    }
+}
+
+asynStatus adPythonPlugin::writeInt32(asynUser *pasynUser, epicsInt32 value) {
+    asynStatus status;
+    int param = pasynUser->reason;
+    if (param == adPythonLoad || (this->nextParam && param > adPythonUserParams[0])) {
+        // We have to modify our python dict to match our param list
+        // so unlock and wait until any dictionary access has finished
+        printf("%s waiting on dictMutex\n", __func__);
+        epicsMutexLock(this->dictMutex);
+        printf("%s got dictMutex\n", __func__);        
+        this->dictModified = 1;
+        // Make sure we're allowed to use the python API
+        printf("%s waiting on GIL\n", __func__);
+        PyGILState_STATE state = PyGILState_Ensure();
+        printf("%s got GIL\n", __func__);  
+        if (param == adPythonLoad) {
+            // reload our python instance, this does callParamCallbacks for is
+           setIntegerParam(param, 0);
+           status = this->makePythonInstance();
+        } else {
+            // Now call the bast class to write the value to the param list
+            status = NDPluginDriver::writeInt32(pasynUser, value);        
+            // our param lib has changed, so update the dict and reprocess            
+            this->updateParamDict();
+        }
+        // release GIL and dict Mutex
+        PyGILState_Release(state);
+        printf("%s released GIL\n", __func__); 
+        epicsMutexUnlock(this->dictMutex);    
+        printf("%s released dictMutex\n", __func__);     
+    } else {
+        status = NDPluginDriver::writeInt32(pasynUser, value);
+    }
+    return status;
+}
+
+asynStatus adPythonPlugin::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
+    asynStatus status;
+    int param = pasynUser->reason;
+    if (this->nextParam && param > adPythonUserParams[0]) {
+        // We have to modify our python dict to match our param list
+        // so unlock and wait until any dictionary access has finished
+        epicsMutexLock(this->dictMutex);
+        this->dictModified = 1;
+        // Make sure we're allowed to use the python API
+        PyGILState_STATE state = PyGILState_Ensure();
+        // Now call the bast class to write the value to the param list
+        status = NDPluginDriver::writeFloat64(pasynUser, value);        
+        // our param lib has changed, so update the dict and reprocess
+        this->updateParamDict();
+        // release GIL and dict Mutex
+        PyGILState_Release(state);
+        epicsMutexUnlock(this->dictMutex);                        
+    } else {
+        status = NDPluginDriver::writeFloat64(pasynUser, value);
+    }
+    return status;
+}
+
+asynStatus adPythonPlugin::writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual) {
+    asynStatus status;
+    int param = pasynUser->reason;
+    if (this->nextParam && param > adPythonUserParams[0]) {
+        // We have to modify our python dict to match our param list
+        // so unlock and wait until any dictionary access has finished
+        epicsMutexLock(this->dictMutex);
+        this->dictModified = 1;
+        // Make sure we're allowed to use the python API
+        PyGILState_STATE state = PyGILState_Ensure();
+        // Now call the bast class to write the value to the param list
+        status = NDPluginDriver::writeOctet(pasynUser, value, maxChars, nActual);        
+        // our param lib has changed, so update the dict and reprocess
+        this->updateParamDict();
+        // release GIL and dict Mutex
+        PyGILState_Release(state);
+        epicsMutexUnlock(this->dictMutex);       
+    } else {
+        status = NDPluginDriver::writeOctet(pasynUser, value, maxChars, nActual);
+    }
+    return status;
+}
+
 /** Import the user class from the pathname and make an instance of it */
 asynStatus adPythonPlugin::makePythonInstance() {     
-    char filename[BIGBUFFER], classname[BIGBUFFER], buffer[BIGBUFFER];
+    char filename[BIGBUFFER], classname[BIGBUFFER];
     printf("makePythonInstance\n");
     
     // Get the filename from param lib
@@ -133,40 +250,20 @@ asynStatus adPythonPlugin::makePythonInstance() {
         return asynError;
     }
 
-    // Run python code for loading file from abs path
-    snprintf(buffer, sizeof(buffer),
-        "import imp, sys\n"
-        "fname = '%s'\n"
-        "f = open(fname)\n"        
-        "try:\n"
-        "   %s = imp.load_module('%s', f, fname, ('.py', 'U', 1)).%s\n"
-        "finally:\n"
-        "   f.close()\n", filename, classname, classname, classname);
-    PyObject *pRet = PyRun_String(buffer, Py_file_input, this->pMainDict, this->pMainDict);
-    if (pRet == NULL) {
+    // Make tuple for makePythonInstance
+    PyObject *pArgs = Py_BuildValue("ss", filename, classname);
+    if (pArgs == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: can't import user class\n",
-            driverName, __func__);
-        PyErr_PrintEx(0);
+                "%s:%s: Cannot build tuple for makePythonInstance()\n",
+                driverName, __func__);  
+        PyErr_PrintEx(0);    
         return asynError;
-    }
-    Py_DECREF(pRet);
-        
-    // Get the class name ref
-    PyObject *pCls = PyMapping_GetItemString(this->pMainDict, classname);
-    if (pCls == NULL || !PyCallable_Check(pCls)) {
-        Py_XDECREF(pCls);    
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: can't get class name ref %s\n",
-            driverName, __func__, classname);
-        PyErr_PrintEx(0);
-        return asynError;
-    }
+    }     
            
     // Create instance of this class
     Py_XDECREF(this->pInstance);
-    this->pInstance = PyObject_CallObject(pCls, NULL);
-    Py_DECREF(pCls);
+    this->pInstance = PyObject_CallObject(this->pMakePythonObject, pArgs);
+    Py_DECREF(pArgs);
     if (pInstance == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
             "%s:%s: can't make instance of class %s\n",
@@ -202,7 +299,7 @@ asynStatus adPythonPlugin::makePythonInstance() {
     this->pParams = PyObject_GetAttrString(this->pInstance, "_params");
     if (this->pParams == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: can't get processArray ref\n",
+            "%s:%s: can't get _params ref\n",
             driverName, __func__);
         PyErr_PrintEx(0);
         return asynError;
@@ -211,8 +308,170 @@ asynStatus adPythonPlugin::makePythonInstance() {
     return asynSuccess;
 }
 
+void adPythonPlugin::processArray() {      
+    NDArrayInfo arrayInfo;
+    
+    // Return if no array to operate on
+    if (this->lastArray == NULL) return;
+    
+    // Release the last produced array
+    if (this->pArrays[0]) {
+        this->pArrays[0]->release();    
+        this->pArrays[0] = NULL;
+    }
+    
+    // First store the time at the beginning of processing for profiling 
+    epicsTimeStamp start, end;
+    epicsTimeGetCurrent(&start);
+    
+    // Create a dimension description for numpy, note that we reverse dims
+    npy_intp npy_dims[ND_ARRAY_MAX_DIMS];
+    for (int i=0; i<this->lastArray->ndims; i++) {        
+        npy_dims[i] = this->lastArray->dims[this->lastArray->ndims-i-1].size;
+        //printf("npy_dims[%d] = %d\n", i, npy_dims[i]);
+    }
+    
+    // Lookup the numpy format from the ad dataType of the array
+    int npy_fmt;
+    if (lookupNpyFormat(this->lastArray->dataType, &npy_fmt)) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:%s: can't lookup numpy format for dataType %d\n",
+                driverName, __func__, this->lastArray->dataType);
+        return;
+    }    
+        
+     // Make sure we're allowed to use the python API
+    PyGILState_STATE state = PyGILState_Ensure();
+        
+    // Wrap the existing data from the NDArray in a numpy array
+    PyObject* pValue = PyArray_SimpleNewFromData(this->lastArray->ndims, npy_dims, npy_fmt, this->lastArray->pData);   
+    if (pValue == NULL) {
+        ErrWithGIL("Cannot make numpy array");    
+        return;
+    }     
+    
+    // Make a blank dict for the attributes
+    PyObject* pAttrs = PyDict_New();
+    if (pAttrs == NULL) {
+        Py_DECREF(pValue);    
+        ErrWithGIL("Cannot make attribute dict");
+        return;
+    } 
+    
+    // Update attr dict with attributes copied from array
+    if (this->updateAttrDict(pAttrs)) {   
+        Py_DECREF(pValue);
+        Py_DECREF(pAttrs);
+        ErrWithGIL("Cannot update attribute dict");               
+        return;        
+    }    
+
+    // Construct argument list, don't increment pValue so it is destroyed with
+    // pArgs
+    PyObject *pArgs = Py_BuildValue("(NO)", pValue, pAttrs);
+    if (pArgs == NULL) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:%s: Cannot build tuple for processArray()\n",
+                driverName, __func__);      
+        Py_DECREF(pValue);
+        Py_DECREF(pAttrs);
+        PyGILState_Release(state);
+        return;
+    } 
+    
+    // Unlock for long call
+    this->unlock();
+    
+    // Make the function call
+    printf("%s doing CallObject\n", __func__);
+    pValue = PyObject_CallObject(this->pProcessArray, pArgs);
+    printf("%s finished CallObject\n", __func__);
+        
+    Py_DECREF(pArgs);
+    if (pValue == NULL) {
+        Py_DECREF(pAttrs);
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:%s: processArray() call failed again\n",
+                driverName, __func__);      
+        PyErr_PrintEx(0);
+        PyGILState_Release(state);   
+        this->lock();       
+        return;
+    }
+
+    // Lock back up
+    PyGILState_Release(state);
+    this->lock();
+    state = PyGILState_Ensure();
+           
+    // Check return type
+    if (!PyObject_IsInstance(pValue, reinterpret_cast<PyObject*>(&PyArray_Type))) {
+        // wasn't an array
+        Py_DECREF(pValue);
+        Py_DECREF(pAttrs);
+        PyGILState_Release(state);
+        return;
+    }    
+    
+    // We must have an array, so find the dataType from it
+    NDDataType_t ad_fmt;
+    if (lookupAdFormat(PyArray_TYPE(pValue), &ad_fmt)) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:%s: can't lookup numpy format for dataType %d\n",
+                driverName, __func__, this->lastArray->dataType);
+        Py_DECREF(pValue);
+        Py_DECREF(pAttrs);                
+        PyGILState_Release(state);
+        return;
+    }       
+    
+    // Create a dimension description from numpy array, note the inverse order
+    size_t ad_dims[ND_ARRAY_MAX_DIMS];
+    for (int i=0; i<PyArray_NDIM(pValue); i++) {
+        ad_dims[i] = PyArray_DIMS(pValue)[PyArray_NDIM(pValue)-i-1];
+    }
+    
+    /* Allocate the array */
+    this->pArrays[0] = pNDArrayPool->alloc(PyArray_NDIM(pValue), ad_dims, ad_fmt, 0, NULL);
+    if (this->pArrays[0] == NULL) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:%s: error allocating buffer\n",
+                driverName, __func__);
+        Py_DECREF(pValue);
+        Py_DECREF(pAttrs);                
+        PyGILState_Release(state);
+        return;
+    }
+
+    // TODO: could avoid this memcpy if we could pass an existing
+    // buffer to NDArray *AND* have it call a user free function
+    this->pArrays[0]->getInfo(&arrayInfo);
+    memcpy(this->pArrays[0]->pData, PyArray_DATA(pValue), arrayInfo.totalBytes);    
+    Py_DECREF(pValue);
+              
+    // Fill in the pAttribute list from the dict
+    // Update attr dict with attributes copied from array
+    if (this->updateAttrList(pAttrs)) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:%s: Cannot update attribute dict\n",
+                driverName, __func__);      
+        Py_DECREF(pAttrs);
+        PyGILState_Release(state);                
+        return;        
+    }    
+    Py_DECREF(pAttrs);
+    
+    // timestamp
+    epicsTimeGetCurrent(&end);
+    setDoubleParam(adPythonTime, epicsTimeDiffInSeconds(&end, &start)*1000);
+    callParamCallbacks();     
+    
+    // done
+    PyGILState_Release(state);    
+}           
+
 /** Update instance param dict from param list */
-asynStatus adPythonPlugin::updateDict() { 
+asynStatus adPythonPlugin::updateParamDict() { 
     // Create param key list
     PyObject *pKeys = PyDict_Keys(this->pParams);
     if (pKeys == NULL) {
@@ -244,7 +503,6 @@ asynStatus adPythonPlugin::updateDict() {
             // get int param
             int value;
             getIntegerParam(param, &value);
-            printf("Set %s %d\n", paramStr, value);
             PyDict_SetItem(this->pParams, key, PyInt_FromLong(value));
         } else if (PyString_Check(pValue)) {
             // get string param
@@ -274,7 +532,7 @@ asynStatus adPythonPlugin::updateDict() {
 }
 
 /** Update param list from instance param dict */
-asynStatus adPythonPlugin::updateParams(int atinit) { 
+asynStatus adPythonPlugin::updateParamList(int atinit) { 
     // Create param key list
     PyObject *pKeys = PyDict_Keys(this->pParams);
     if (pKeys == NULL) {
@@ -332,206 +590,8 @@ asynStatus adPythonPlugin::updateParams(int atinit) {
     return asynSuccess;
 }
 
-
-/** Callback function that is called by the NDArray driver with new NDArray data.
-  * Does image statistics.
-  * \param[in] pArray  The NDArray from the callback.
-  */
-void adPythonPlugin::processCallbacks(NDArray *pArray) {
-    // First call the base class method
-    NDPluginDriver::processCallbacks(pArray);
-
-    // Store the input array so we can reproduce it
-    if (this->lastArray) this->lastArray->release();
-    pArray->reserve();
-    this->lastArray = pArray;
-   
-    // Process the NDArray
-    this->processArray();
-
-    // We have to modify our python dict to match our param list
-    // so unlock and wait until any dictionary access has finished
-    epicsMutexLock(this->dictMutex);
-    if (this->dictModified) {
-        // CA takes priority in dict writes
-        this->dictModified = 0;
-    } else {
-        // Make sure we're allowed to use the python API
-        PyGILState_STATE state = PyGILState_Ensure();
-        // update param list, this will callParamCallbacks at the end
-        this->updateParams(0);    
-        // release GIL and dict Mutex
-        PyGILState_Release(state);
-    }
-    epicsMutexUnlock(this->dictMutex);
-    
-    // Spit out the array
-    if (this->pArrays[0]) {
-        this->unlock();
-        doCallbacksGenericPointer(this->pArrays[0], NDArrayData, 0);
-        this->lock();    
-    }
-}
-
-asynStatus adPythonPlugin::writeInt32(asynUser *pasynUser, epicsInt32 value) {
-    asynStatus status;
-    int param = pasynUser->reason;
-    if (param == adPythonLoad || (this->nextParam && param > adPythonUserParams[0])) {
-        // We have to modify our python dict to match our param list
-        // so unlock and wait until any dictionary access has finished
-        epicsMutexLock(this->dictMutex);
-        this->dictModified = 1;
-        // Make sure we're allowed to use the python API
-        PyGILState_STATE state = PyGILState_Ensure();
-        if (param == adPythonLoad) {
-            // reload our python instance, this does callParamCallbacks for is
-           setIntegerParam(param, 0);
-           status = this->makePythonInstance();
-        } else {
-            // Now call the bast class to write the value to the param list
-            status = NDPluginDriver::writeInt32(pasynUser, value);        
-            // our param lib has changed, so update the dict and reprocess            
-            this->updateDict();
-        }
-        // release GIL and dict Mutex
-        PyGILState_Release(state);
-        epicsMutexUnlock(this->dictMutex);        
-    } else {
-        status = NDPluginDriver::writeInt32(pasynUser, value);
-    }
-    return status;
-}
-
-asynStatus adPythonPlugin::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
-    asynStatus status;
-    int param = pasynUser->reason;
-    if (this->nextParam && param > adPythonUserParams[0]) {
-        // We have to modify our python dict to match our param list
-        // so unlock and wait until any dictionary access has finished
-        epicsMutexLock(this->dictMutex);
-        this->dictModified = 1;
-        // Make sure we're allowed to use the python API
-        PyGILState_STATE state = PyGILState_Ensure();
-        // Now call the bast class to write the value to the param list
-        status = NDPluginDriver::writeFloat64(pasynUser, value);        
-        // our param lib has changed, so update the dict and reprocess
-        this->updateDict();
-        // release GIL and dict Mutex
-        PyGILState_Release(state);
-        epicsMutexUnlock(this->dictMutex);                        
-    } else {
-        status = NDPluginDriver::writeFloat64(pasynUser, value);
-    }
-    return status;
-}
-
-asynStatus adPythonPlugin::writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual) {
-    asynStatus status;
-    int param = pasynUser->reason;
-    if (this->nextParam && param > adPythonUserParams[0]) {
-        // We have to modify our python dict to match our param list
-        // so unlock and wait until any dictionary access has finished
-        epicsMutexLock(this->dictMutex);
-        this->dictModified = 1;
-        // Make sure we're allowed to use the python API
-        PyGILState_STATE state = PyGILState_Ensure();
-        // Now call the bast class to write the value to the param list
-        status = NDPluginDriver::writeOctet(pasynUser, value, maxChars, nActual);        
-        // our param lib has changed, so update the dict and reprocess
-        this->updateDict();
-        // release GIL and dict Mutex
-        PyGILState_Release(state);
-        epicsMutexUnlock(this->dictMutex);       
-    } else {
-        status = NDPluginDriver::writeOctet(pasynUser, value, maxChars, nActual);
-    }
-    return status;
-}
-
-/* The obligatory lookup table of ad datatype to numpy datatype */
-struct pix_lookup {
-    int npy_fmt;
-    NDDataType_t ad_fmt;
-};
-
-static const struct pix_lookup pix_lookup[] = {
-   { NPY_INT8,     NDInt8 },     /**< Signed 8-bit integer */
-   { NPY_UINT8,    NDUInt8 },    /**< Unsigned 8-bit integer */
-   { NPY_INT16,    NDInt16 },    /**< Signed 16-bit integer */
-   { NPY_UINT16,   NDUInt16 },   /**< Unsigned 16-bit integer */
-   { NPY_INT32,    NDInt32 },    /**< Signed 32-bit integer */
-   { NPY_UINT16,   NDUInt32 },   /**< Unsigned 32-bit integer */
-   { NPY_FLOAT32,  NDFloat32 },  /**< 32-bit float */
-   { NPY_FLOAT64,  NDFloat64 }   /**< 64-bit float */
-};
-
-/** Lookup a numpy pixel format from an NDDataType */
-asynStatus adPythonPlugin::lookupNpyFormat(NDDataType_t ad_fmt, int *npy_fmt) {
-    const int N = sizeof(pix_lookup) / sizeof(struct pix_lookup);
-    for (int i = 0; i < N; i ++)
-        if (ad_fmt == pix_lookup[i].ad_fmt) {
-            *npy_fmt = pix_lookup[i].npy_fmt;
-            return asynSuccess;
-        }
-    return asynError;
-}
-
-/** Lookup an NDDataType from a numpy pixel format */
-asynStatus adPythonPlugin::lookupAdFormat(int npy_fmt, NDDataType_t *ad_fmt) {
-    const int N = sizeof(pix_lookup) / sizeof(struct pix_lookup);
-    for (int i = 0; i < N; i ++)
-        if (npy_fmt == pix_lookup[i].npy_fmt) {
-            *ad_fmt = pix_lookup[i].ad_fmt;
-            return asynSuccess;
-        }
-    return asynError;
-}
-
-void adPythonPlugin::processArray() {      
-    NDArrayInfo arrayInfo;
-    
-    // Return if no array to operate on
-    if (this->lastArray == NULL) return;
-    
-    // Release the last produced array
-    if (this->pArrays[0]) {
-        this->pArrays[0]->release();    
-        this->pArrays[0] = NULL;
-    }
-    
-    // First store the time at the beginning of processing for profiling 
-    epicsTimeStamp start, end;
-    epicsTimeGetCurrent(&start);
-    
-    // Create a dimension description for numpy, note that we reverse dims
-    npy_intp npy_dims[ND_ARRAY_MAX_DIMS];
-    for (int i=0; i<this->lastArray->ndims; i++) {        
-        npy_dims[i] = this->lastArray->dims[this->lastArray->ndims-i-1].size;
-        //printf("npy_dims[%d] = %d\n", i, npy_dims[i]);
-    }
-    
-    // Lookup the numpy format from the ad dataType of the array
-    int npy_fmt;
-    if (lookupNpyFormat(this->lastArray->dataType, &npy_fmt)) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: can't lookup numpy format for dataType %d\n",
-                driverName, __func__, this->lastArray->dataType);
-        return;
-    }    
-        
-     // Make sure we're allowed to use the python API
-    PyGILState_STATE state = PyGILState_Ensure();
-        
-    // Wrap the existing data from the NDArray in a numpy array
-    PyObject* pValue = PyArray_SimpleNewFromData(this->lastArray->ndims, npy_dims, npy_fmt, this->lastArray->pData);   
-    if (pValue == NULL) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: Cannot make numpy array\n",
-                driverName, __func__);      
-        PyGILState_Release(state);                
-        return;
-    }     
-    
+/** Update instance param dict from param list */
+asynStatus adPythonPlugin::updateAttrDict(PyObject *pAttrs) { 
     /* Construct an attribute list. We use a separate attribute list
     * from the one in pArray to avoid the need to copy the array. */
     /* First clear the list*/
@@ -544,17 +604,6 @@ void adPythonPlugin::processArray() {
     * the driver and prior plugins */
     this->lastArray->pAttributeList->copy(this->pFileAttributes);    
            
-    // Make a blank dict for the attributes
-    PyObject* pDict = PyDict_New();
-    if (pDict == NULL) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: Cannot make attribute dict\n",
-                driverName, __func__);      
-        Py_DECREF(pValue);
-        PyGILState_Release(state);                
-        return;
-    } 
-    
     // Fill it in
     NDAttribute *pAttr = this->pFileAttributes->next(NULL);
     while(pAttr != NULL) {    
@@ -597,100 +646,89 @@ void adPythonPlugin::processArray() {
                 "%s:%s: attribute %s could not be put in attribute dict\n",
                 driverName, __func__, pAttr->pName);            
         } else {            
-            PyDict_SetItemString(pDict, pAttr->pName, pObject); 
+            PyDict_SetItemString(pAttrs, pAttr->pName, pObject); 
             Py_DECREF(pObject); 
         }
         pAttr = this->pFileAttributes->next(pAttr);
-    }    
+    }        
+    return asynSuccess;
+}
 
-    // Construct argument list, don't increment pValue so it is destroyed with
-    // pArgs
-    PyObject *pArgs = Py_BuildValue("(NO)", pValue, pDict);
-    if (pArgs == NULL) {
+/** Update param list from instance param dict */
+asynStatus adPythonPlugin::updateAttrList(PyObject *pAttrs) { 
+    // Create param key list
+    PyObject *pKeys = PyDict_Keys(this->pParams);
+    if (pKeys == NULL) {
         asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: Cannot build tuple for processArray()\n",
-                driverName, __func__);      
-        Py_DECREF(pValue);
-        Py_DECREF(pDict);
-        PyGILState_Release(state);
-        return;
-    } 
-    
-    // Unlock for long call
-    this->unlock();
-    
-    // Make the function call
-    pValue = PyObject_CallObject(this->pProcessArray, pArgs);
-    
-    Py_DECREF(pArgs);
-    if (pValue == NULL) {
-        Py_DECREF(pDict);
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: processArray() call failed again\n",
-                driverName, __func__);      
-        PyErr_PrintEx(0);
-        PyGILState_Release(state);   
-        this->lock();       
-        return;
+            "%s:%s: can't get keys of _param dict\n",
+            driverName, __func__);
+        return asynError;
     }
-
-    // Lock back up
-    PyGILState_Release(state);
-    this->lock();
-    state = PyGILState_Ensure();
-           
-    // Check return type
-    if (!PyObject_IsInstance(pValue, reinterpret_cast<PyObject*>(&PyArray_Type))) {
-        // wasn't an array
-        Py_DECREF(pValue);
-        Py_DECREF(pDict);
-        PyGILState_Release(state);
-        return;
-    }    
     
-    // We must have an array, so find the dataType from it
+    // Create a param of the correct type for each item
+    for (Py_ssize_t i=0; i<PyList_Size(pKeys); i++) {
+        PyObject *key = PyList_GetItem(pKeys, i);
+        PyObject *keyStr = PyObject_Str(key);
+        char *paramStr = PyString_AsString(keyStr);
+        PyObject *pValue = PyDict_GetItem(this->pParams, key);
+        if (PyFloat_Check(pValue)) {
+            double value = PyFloat_AsDouble(pValue);
+            this->pArrays[0]->pAttributeList->add(paramStr, paramStr, NDAttrFloat64, &value);
+        } else if (PyInt_Check(pValue)) {
+            long value = PyInt_AsLong(pValue);
+            this->pArrays[0]->pAttributeList->add(paramStr, paramStr, NDAttrInt32, &value);
+        } else if (PyString_Check(pValue)) {     
+            char *value = PyString_AsString(pValue);     
+            this->pArrays[0]->pAttributeList->add(paramStr, paramStr, NDAttrString, value);
+        } else {
+            asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                "%s:%s: param %s is not an int, float or string\n",
+                driverName, __func__, paramStr);            
+        }
+    }
+    Py_DECREF(pKeys);
+    callParamCallbacks();
+    return asynSuccess;
+}
+
+/* The obligatory lookup table of ad datatype to numpy datatype */
+struct pix_lookup {
+    int npy_fmt;
     NDDataType_t ad_fmt;
-    if (lookupAdFormat(PyArray_TYPE(pValue), &ad_fmt)) {
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: can't lookup numpy format for dataType %d\n",
-                driverName, __func__, this->lastArray->dataType);
-        PyGILState_Release(state);
-        return;
-    }       
-    
-    // Create a dimension description from numpy array, note the inverse order
-    size_t ad_dims[ND_ARRAY_MAX_DIMS];
-    for (int i=0; i<PyArray_NDIM(pValue); i++) {
-        ad_dims[i] = PyArray_DIMS(pValue)[PyArray_NDIM(pValue)-i-1];
-    }
-    
-    /* Allocate the array */
-    this->pArrays[0] = pNDArrayPool->alloc(PyArray_NDIM(pValue), ad_dims, ad_fmt, 0, NULL);
-    if (this->pArrays[0] == NULL) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: error allocating buffer\n",
-                driverName, __func__);
-        PyGILState_Release(state);
-        return;
-    }
+};
 
-    // TODO: could avoid this memcpy if we could pass an existing
-    // buffer to NDArray *AND* have it call a user free function
-    this->pArrays[0]->getInfo(&arrayInfo);
-    memcpy(this->pArrays[0]->pData, PyArray_DATA(pValue), arrayInfo.totalBytes);    
-      
-    // Fill in the pAttribute list from the dict
-    Py_DECREF(pDict);
-    
-    // timestamp
-    epicsTimeGetCurrent(&end);
-    setDoubleParam(adPythonTime, epicsTimeDiffInSeconds(&end, &start)*1000);
-    callParamCallbacks();     
-    
-    // done
-    PyGILState_Release(state);    
-}           
+static const struct pix_lookup pix_lookup[] = {
+   { NPY_INT8,     NDInt8 },     /**< Signed 8-bit integer */
+   { NPY_UINT8,    NDUInt8 },    /**< Unsigned 8-bit integer */
+   { NPY_INT16,    NDInt16 },    /**< Signed 16-bit integer */
+   { NPY_UINT16,   NDUInt16 },   /**< Unsigned 16-bit integer */
+   { NPY_INT32,    NDInt32 },    /**< Signed 32-bit integer */
+   { NPY_UINT16,   NDUInt32 },   /**< Unsigned 32-bit integer */
+   { NPY_FLOAT32,  NDFloat32 },  /**< 32-bit float */
+   { NPY_FLOAT64,  NDFloat64 }   /**< 64-bit float */
+};
 
+/** Lookup a numpy pixel format from an NDDataType */
+asynStatus adPythonPlugin::lookupNpyFormat(NDDataType_t ad_fmt, int *npy_fmt) {
+    const int N = sizeof(pix_lookup) / sizeof(struct pix_lookup);
+    for (int i = 0; i < N; i ++)
+        if (ad_fmt == pix_lookup[i].ad_fmt) {
+            *npy_fmt = pix_lookup[i].npy_fmt;
+            return asynSuccess;
+        }
+    return asynError;
+}
+
+/** Lookup an NDDataType from a numpy pixel format */
+asynStatus adPythonPlugin::lookupAdFormat(int npy_fmt, NDDataType_t *ad_fmt) {
+    const int N = sizeof(pix_lookup) / sizeof(struct pix_lookup);
+    for (int i = 0; i < N; i ++)
+        if (npy_fmt == pix_lookup[i].npy_fmt) {
+            *ad_fmt = pix_lookup[i].ad_fmt;
+            return asynSuccess;
+        }
+    return asynError;
+}
 
 /** Configuration routine.  Called directly, or from the iocsh function in NDFileEpics */
 static int adPythonPluginConfigure(const char *portNameArg, const char *filename,

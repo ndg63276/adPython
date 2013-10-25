@@ -20,8 +20,6 @@ USR_CXXFLAGS += -Wredundant-decls
 USR_CXXFLAGS += -Wmissing-declarations
 USR_CXXFLAGS += -Wcast-qual
 
-
-
 LIBRARY_IOC += adPython
 
 # xxxRecord.dbd will be installed into <top>/dbd
@@ -35,13 +33,11 @@ ifneq ($(PYTHON),)
 	USR_INCLUDES += -I$(PYTHON)/include/python2.7
 	python2.7_DIR = $(PYTHON)/lib
 	adPython_LIBS += python2.7
-	USR_CXXFLAGS += -DDATADIR=\"$(shell cd $(TOP)/data; pwd)\"
+	USR_CXXFLAGS += -DDATADIR=\"$(shell cd ..; pwd)\"
 	#pyDrv_SYS_LIBS += util
 else
 	pyDrv_SYS_LIBS += python
 endif
-
-DATA += $(patsubst ../%, %, $(wildcard ../*.py))
 
 # We need to link against the EPICS Base libraries
 #xxx_LIBS += $(EPICS_BASE_IOC_LIBS)

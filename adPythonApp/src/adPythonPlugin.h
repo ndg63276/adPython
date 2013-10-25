@@ -43,12 +43,14 @@ private:
     asynStatus lookupNpyFormat(NDDataType_t ad_fmt, int *npy_fmt);
     asynStatus lookupAdFormat(int npy_fmt, NDDataType_t *ad_fmt);
     asynStatus makePythonInstance();
-    asynStatus updateDict();
-    asynStatus updateParams(int atinit);
+    asynStatus updateParamDict();
+    asynStatus updateParamList(int atinit);
+    asynStatus updateAttrDict(PyObject *pAttrs);
+    asynStatus updateAttrList(PyObject *pAttrs);    
     void do_processArray();
     void processArray();
     
-    PyObject *pInstance, *pParams, *pProcessArray, *pParamChanged, *pMain, *pMainDict;
+    PyObject *pInstance, *pParams, *pProcessArray, *pParamChanged, *pMakePythonObject;
     NDAttributeList *pFileAttributes;
     int nextParam, dictModified;
     epicsMutexId dictMutex;
