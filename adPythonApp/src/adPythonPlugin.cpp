@@ -17,7 +17,7 @@
 #define GOOD 0
 // User plugin not working
 #define BAD 1
-// adPythonPlugin.py notworking
+// adPythonPlugin.py not working
 #define UGLY 2
 
 #define NoGood(errString, st) {                         \
@@ -117,6 +117,9 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     // First call the base class method
     NDPluginDriver::processCallbacks(pArray);
 
+    // Make sure we are in a good state, otherwise do nothing
+    if (this->pluginState != GOOD) return;
+
     // We have to modify our python dict to match our param list
     // so unlock and wait until any dictionary access has finished
     this->unlock();
@@ -135,11 +138,11 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
        
     // Wrap the NDArray as a python tuple
     this->wrapArray(pArray);
-    
+       
     // Unlock for long call
     this->unlock();
     
-    // Make the function call
+    // Make the function call    
     PyObject *pValue = PyObject_CallObject(this->pProcessArray, this->pProcessArgs);
 
     // Lock back up
@@ -374,6 +377,9 @@ asynStatus adPythonPlugin::wrapArray(NDArray *pArray) {
 // Called with GIL taken, this->lock taken
 asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {     
      NDArrayInfo arrayInfo;
+
+    // Return if we aren't good
+    if (this->pluginState != GOOD) return asynError;
     
     // Check return value for existance    
     if (pValue == NULL) Bad("processArray() call failed");
