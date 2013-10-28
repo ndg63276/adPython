@@ -13,6 +13,7 @@ include $(TOP)/configure/CONFIG
 #
 DB += adPythonPlugin.template
 DB += adPythonMorph.template
+DB += adPythonFocus.template
 
 #----------------------------------------------------
 # In a Diamond IOC Application, build db files from
