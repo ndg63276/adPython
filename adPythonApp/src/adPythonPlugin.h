@@ -35,27 +35,27 @@ protected:
     int adPythonClassname;
     int adPythonLoad;
     int adPythonTime;
-    int adPythonGood;    
-    #define LAST_ADPYTHONPLUGIN_PARAM adPythonGood
+    int adPythonState;    
+    #define LAST_ADPYTHONPLUGIN_PARAM adPythonState
     #define NUM_ADPYTHONPLUGIN_PARAMS (&LAST_ADPYTHONPLUGIN_PARAM - &FIRST_ADPYTHONPLUGIN_PARAM + 1 + NUSERPARAMS)
     int adPythonUserParams[NUSERPARAMS];
 
 private:
     asynStatus importAdPythonModule();
     asynStatus makePyInst();
-    asynStatus processArray();    
+    asynStatus wrapArray(NDArray *pArray);  
+    asynStatus interpretReturn(PyObject *pValue);
     asynStatus updateParamDict();
     asynStatus updateParamList(int atinit);
-    asynStatus updateAttrDict(PyObject *pAttrs);
-    asynStatus updateAttrList(PyObject *pAttrs);    
+    asynStatus updateAttrDict(NDArray *pArray);
+    asynStatus updateAttrList();    
     asynStatus lookupNpyFormat(NDDataType_t ad_fmt, int *npy_fmt);
     asynStatus lookupAdFormat(int npy_fmt, NDDataType_t *ad_fmt);
     
-    PyObject *pInstance, *pParams, *pProcessArray, *pParamChanged, *pMakePyInst;
+    PyObject *pInstance, *pParams, *pProcessArray, *pParamChanged, *pMakePyInst, *pAttrs, *pProcessArgs;
     NDAttributeList *pFileAttributes;
-    int nextParam, dictModified, allGood;
+    int nextParam, pluginState;
     epicsMutexId dictMutex;
-    NDArray *lastArray;
     PyThreadState *mainThreadState;
 };
 

@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 421
-y 259
+x 425
+y 311
 w 390
 h 130
 font "arial-bold-r-12.0"
@@ -317,7 +317,7 @@ x 310
 y 100
 w 70
 h 20
-controlPv "$(P)$(R)Good_RBV"
+controlPv "$(P)$(R)PluginState_RBV"
 fgColor index 16
 fgAlarm
 bgColor index 10

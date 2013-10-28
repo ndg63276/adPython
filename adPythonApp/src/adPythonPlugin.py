@@ -48,7 +48,6 @@ class AdPythonPlugin(object):
     def __setitem__(self, param, value):
         assert param in self, "Param %s not in param lib" % param
         self._params[param] = value
-        self.paramChanged()
  
     # see if param is supported
     def __contains__(self, param):

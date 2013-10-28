@@ -78,13 +78,18 @@ record(bi, "$(P)$(R)ReadFile_RBV")
 }
 
 # % gdatag, binary, ro, $(PORT)_adPython, Good_RBV, Readback for Good
-record(bi, "$(P)$(R)Good_RBV")
+record(mbbi, "$(P)$(R)PluginState_RBV")
 {
     field(DTYP, "asynInt32")
-    field(INP,  "@asyn($(PORT),0,$(TIMEOUT))ADPYTHON_GOOD")
-    field(ZNAM, "Bad")
-    field(ZSV,  "MAJOR")
-    field(ONAM, "Good")
-    field(OSV,  "NO_ALARM")
+    field(INP,  "@asyn($(PORT),0,$(TIMEOUT))ADPYTHON_STATE")
+    field(ZRST, "Good")
+    field(ZRSV, "NO_ALARM")
+    field(ZRVL, "0")
+    field(ONST, "Bad")
+    field(ONSV, "MAJOR")
+    field(ONVL, "0")
+    field(TWST, "Ugly")
+    field(TWSV, "MAJOR")
+    field(TWVL, "0")
     field(SCAN, "I/O Intr")
 }
