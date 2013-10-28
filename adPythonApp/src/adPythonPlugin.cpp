@@ -177,7 +177,7 @@ asynStatus adPythonPlugin::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     int status = asynSuccess;
     int param = pasynUser->reason;
     if (param == adPythonLoad || 
-            (this->nextParam && param > adPythonUserParams[0])) {
+            (this->nextParam && param >= adPythonUserParams[0])) {
         // We have to modify our python dict to match our param list
         // so unlock and wait until any dictionary access has finished
         this->unlock();
@@ -211,7 +211,7 @@ asynStatus adPythonPlugin::writeFloat64(asynUser *pasynUser,
                                         epicsFloat64 value) {
     int status = asynSuccess;
     int param = pasynUser->reason;
-    if (this->nextParam && param > adPythonUserParams[0]) {
+    if (this->nextParam && param >= adPythonUserParams[0]) {
         // We have to modify our python dict to match our param list
         // so unlock and wait until any dictionary access has finished
         this->unlock();
@@ -237,7 +237,7 @@ asynStatus adPythonPlugin::writeOctet(asynUser *pasynUser, const char *value,
                                       size_t maxChars, size_t *nActual) {
     int status = asynSuccess;
     int param = pasynUser->reason;
-    if (this->nextParam && param > adPythonUserParams[0]) {
+    if (this->nextParam && param >= adPythonUserParams[0]) {
         // We have to modify our python dict to match our param list
         // so unlock and wait until any dictionary access has finished
         this->unlock();
