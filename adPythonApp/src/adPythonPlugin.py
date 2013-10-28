@@ -11,7 +11,7 @@ import os, logging
 #logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s:  %(message)s', level=logging.INFO)
 #logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s  %(filename)s:%(lineno)d %(funcName)s():  %(message)s', level=logging.INFO)
 #logging.basicConfig(format='%(asctime)s %(levelname)8s %(filename)20s:%(lineno)d %(funcName)16s():  %(message)s', level=logging.INFO)
-logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)10s %(filename)s:%(lineno)d:  %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(name)s %(filename)s:%(lineno)d: %(message)s', level=logging.INFO)
 
 # define a helper function that imports a python filename and returns an 
 # instance of classname which is contained in it
@@ -28,9 +28,9 @@ def makePyInst(portname, filename, classname):
         inst.log = log
         inst.paramChanged()
         return inst
-    except Exception, e:
+    except:
         log.exception("Creating %s:%s threw exception", filename, classname)
-
+        raise
 
 class AdPythonPlugin(object):   
     # Will be our param dict

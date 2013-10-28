@@ -12,6 +12,7 @@ include $(TOP)/configure/CONFIG
 # templates like this
 #
 DB += adPythonPlugin.template
+DB += adPythonTemplate.template
 DB += adPythonMorph.template
 DB += adPythonFocus.template
 

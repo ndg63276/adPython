@@ -26,11 +26,11 @@ class adPythonPlugin(_NDPluginBase):
         # Init the python classname specific class
         class _tmp(AutoSubstitution):
             ModuleName = adPythonPlugin.ModuleName
-            TrueName = "_adPython%s" % classname.title()
-            TemplateFile = "adPython%s.template" % classname.title()
+            TrueName = "_adPython%s" % classname
+            TemplateFile = "adPython%s.template" % classname
         _tmp(**filter_dict(args, _tmp.ArgInfo.Names()))
         # Store the args
-        self.filename = "$(ADPYTHON)/adPythonApp/src/adPython%s.py" % classname.title()
+        self.filename = "$(ADPYTHON)/adPythonApp/src/adPython%s.py" % classname
         self.__dict__.update(locals())
 
     def Initialise(self):
@@ -43,7 +43,7 @@ class adPythonPlugin(_NDPluginBase):
 
     # __init__ arguments
     ArgInfo = _NDPluginBase.ArgInfo + makeArgInfo(__init__,
-        classname = Choice('Predefined python class to use', ["morph", "Focus"]),
+        classname = Choice('Predefined python class to use', ["Morph", "Focus", "Template"]),
         BUFFERS = Simple('Maximum number of NDArray buffers to be created for '
             'plugin callbacks', int),
         MEMORY = Simple('Max memory to allocate, should be maxw*maxh*nbuffer '

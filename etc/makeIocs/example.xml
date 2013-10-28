@@ -1,8 +1,8 @@
 <?xml version="1.0" ?>
 <components arch="linux-x86">
 	<areaDetector.URLDriver ADDR="0" P="ADPYTHONTEST" PORT="CAM.URL" R=":URL:" TIMEOUT="1"/>
-	<adPython.adPythonPlugin ADDR="0" Enabled="1" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.URL" P="ADPYTHONTEST" PORT="CAM.PY1" R=":PY1:" TIMEOUT="1" classname="morph"/>
-	<adPython.adPythonPlugin ADDR="0" Enabled="1" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.URL" P="ADPYTHONTEST" PORT="CAM.PY2" R=":PY2:" TIMEOUT="1" classname="morph"/>
+	<adPython.adPythonPlugin ADDR="0" Enabled="1" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.URL" P="ADPYTHONTEST" PORT="CAM.PY1" R=":PY1:" TIMEOUT="1" classname="Morph"/>
+	<adPython.adPythonPlugin ADDR="0" Enabled="1" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.URL" P="ADPYTHONTEST" PORT="CAM.PY2" R=":PY2:" TIMEOUT="1" classname="Template"/>
 	<!--<adPython.adPythonPlugin ADDR="0" Enabled="1" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.URL" P="ADPYTHONTEST" PORT="CAM.F" R=":FOCUS:" TIMEOUT="1" classname="Focus"/>-->
 	<areaDetector.NDStdArrays ADDR="0" Enabled="1" FTVL="UCHAR" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.PY1" NELEMENTS="786432" P="ADPYTHONTEST" PORT="CAM.ARR1" R=":ARR1:" TIMEOUT="1" TYPE="Int8"/>
 	<areaDetector.NDStdArrays ADDR="0" Enabled="1" FTVL="UCHAR" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.PY2" NELEMENTS="786432" P="ADPYTHONTEST" PORT="CAM.ARR2" R=":ARR2:" TIMEOUT="1" TYPE="Int8"/>

@@ -18,7 +18,7 @@ public:
                    const char *classname, int queueSize, int blockingCallbacks,
 				   const char *NDArrayPort, int NDArrayAddr, int maxBuffers, size_t maxMemory,
 				   int priority, int stackSize);
-	~adPythonPlugin();
+	~adPythonPlugin() {}
     /** This is called when the plugin gets a new array callback */
     virtual void processCallbacks(NDArray *pArray);
     /** This is when we get a new int value */
@@ -56,7 +56,7 @@ private:
     NDAttributeList *pFileAttributes;
     int nextParam, pluginState;
     epicsMutexId dictMutex;
-    PyThreadState *mainThreadState;
+    PyThreadState *threadState;
 };
 
 #endif

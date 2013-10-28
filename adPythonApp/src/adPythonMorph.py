@@ -15,7 +15,7 @@ MORPH_GAUSSIAN_BLUR=8
 MORPH_MEDIAN_BLUR=9
 
 
-class morph(AdPythonPlugin):
+class Morph(AdPythonPlugin):
     def __init__(self):
         params = dict(ksize = 3, operation = 1, iters = 1)
         AdPythonPlugin.__init__(self, params)
@@ -43,4 +43,4 @@ class morph(AdPythonPlugin):
         return dest
 
 if __name__=="__main__":
-    morph().runOffline()
+    Morph().runOffline()

@@ -27,6 +27,7 @@
     this->pluginState = st;                             \
     setIntegerParam(adPythonState, this->pluginState);  \
     callParamCallbacks();                               \
+    PyErr_Clear();                                      \
     return asynError;                                   \
 }
 
@@ -34,6 +35,8 @@
 #define Ugly(errString) NoGood(errString, UGLY)
 
 const char *driverName = "adPythonPlugin";
+
+static PyThreadState *mainThreadState = NULL;
 
 adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
                    const char *classname, int queueSize, int blockingCallbacks,
@@ -70,7 +73,7 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
 
     // First we tell python where to find adPythonPlugin.py
     char buffer[BIGBUFFER];
-    snprintf(buffer, sizeof(buffer), "PYTHONPATH=%s", DATADIR);
+    snprintf(buffer, sizeof(buffer), "PYTHONPATH=/dls_sw/work/tools/RHEL6-x86_64/OpenCV/prefix/lib/python2.7/site-packages:%s", DATADIR);
     putenv(buffer);
     
     // Now we initialise python
@@ -80,32 +83,32 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
     
         // Be sure to save thread state otherwise other thread's PyGILState_Ensure()
         // calls will hang. This releases the GIL
-        this->mainThreadState = PyEval_SaveThread();
-    } else {
-        this->mainThreadState = NULL;
+        mainThreadState = PyEval_SaveThread();
     }
     
-    // Make sure we have the GIL again
-    PyGILState_STATE state = PyGILState_Ensure();
-
+    // Create a thread state just for us
+    this->threadState = PyThreadState_New(mainThreadState->interp);
+    PyEval_RestoreThread(this->threadState);
+    
     // Import our supporting library
     this->importAdPythonModule();
 
     // Try and make an instance of this
-    this->makePyInst();
-
-    // Update param list from dict, also creating keys
-    this->updateParamList(1);
+    if (this->makePyInst()) {
+        // We failed, so our params are unusable
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s:%s: User import failed, param lib unusable\n",
+            driverName, __func__);
+        this->pluginState = UGLY;
+        setIntegerParam(adPythonState, this->pluginState);
+        callParamCallbacks();
+    } else {
+        // Update param list from dict, also creating keys
+        this->updateParamList(1);
+    }
     
     // Release the GIL and finish
-    PyGILState_Release(state);
-}
-
-adPythonPlugin::~adPythonPlugin() {
-    if (this->mainThreadState) {
-        PyEval_RestoreThread(this->mainThreadState);
-        Py_Finalize();
-    }
+    this->threadState = PyEval_SaveThread();
 }
 
 /** Callback function that is called by the NDArray driver with new NDArray data
@@ -126,7 +129,7 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     epicsMutexLock(this->dictMutex);
 
     // Make sure we're allowed to use the python API
-    PyGILState_STATE state = PyGILState_Ensure();
+    PyEval_RestoreThread(this->threadState);
     this->lock(); 
 
     // Store the time at the beginning of processing for profiling 
@@ -159,7 +162,7 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     this->updateAttrList();
 
     // release GIL and dict Mutex    
-    PyGILState_Release(state);
+    this->threadState = PyEval_SaveThread();
     epicsMutexUnlock(this->dictMutex);
     
     // timestamp
@@ -186,7 +189,7 @@ asynStatus adPythonPlugin::writeInt32(asynUser *pasynUser, epicsInt32 value) {
         this->unlock();
         epicsMutexLock(this->dictMutex);
         // Make sure we're allowed to use the python API
-        PyGILState_STATE state = PyGILState_Ensure();
+        PyEval_RestoreThread(this->threadState);
         // Now call the bast class to write the value to the param list
         this->lock();        
         status |= NDPluginDriver::writeInt32(pasynUser, value);               
@@ -201,7 +204,7 @@ asynStatus adPythonPlugin::writeInt32(asynUser *pasynUser, epicsInt32 value) {
             status |= this->updateParamDict();
         }
         // release GIL and dict Mutex
-        PyGILState_Release(state);
+        this->threadState = PyEval_SaveThread();
         epicsMutexUnlock(this->dictMutex);    
     } else {
         status |= NDPluginDriver::writeInt32(pasynUser, value);
@@ -220,14 +223,14 @@ asynStatus adPythonPlugin::writeFloat64(asynUser *pasynUser,
         this->unlock();
         epicsMutexLock(this->dictMutex);
         // Make sure we're allowed to use the python API
-        PyGILState_STATE state = PyGILState_Ensure();
+        PyEval_RestoreThread(this->threadState);
         // Now call the bast class to write the value to the param list
         this->lock();        
         status |= NDPluginDriver::writeFloat64(pasynUser, value);                
         // our param lib has changed, so update the dict and reprocess
         status |= this->updateParamDict();
         // release GIL and dict Mutex
-        PyGILState_Release(state);
+        this->threadState = PyEval_SaveThread();
         epicsMutexUnlock(this->dictMutex);                        
     } else {
         status = NDPluginDriver::writeFloat64(pasynUser, value);
@@ -246,14 +249,14 @@ asynStatus adPythonPlugin::writeOctet(asynUser *pasynUser, const char *value,
         this->unlock();
         epicsMutexLock(this->dictMutex);
         // Make sure we're allowed to use the python API
-        PyGILState_STATE state = PyGILState_Ensure();
+        PyEval_RestoreThread(this->threadState);
         // Now call the bast class to write the value to the param list
         this->lock();        
         status |= NDPluginDriver::writeOctet(pasynUser, value, maxChars, nActual);                
         // our param lib has changed, so update the dict and reprocess
         status |= this->updateParamDict();
         // release GIL and dict Mutex
-        PyGILState_Release(state);
+        this->threadState = PyEval_SaveThread();
         epicsMutexUnlock(this->dictMutex);       
     } else {
         status |= NDPluginDriver::writeOctet(pasynUser, value, maxChars, nActual);
@@ -291,7 +294,7 @@ asynStatus adPythonPlugin::makePyInst() {
     
     // If adPython module has failed to load we can't do anything
     if (this->pluginState == UGLY) 
-        Ugly("Can't load user python class as adPythonPlugin already failed");
+        Ugly("Can't load user python class as initial load already failed");
     
     // Get the filename from param lib
     if (getStringParam(adPythonFilename, BIGBUFFER, filename)) 
@@ -307,9 +310,10 @@ asynStatus adPythonPlugin::makePyInst() {
            
     // Create instance of this class, freeing the old one if it exists
     Py_XDECREF(this->pInstance);
+    printf("this->pMakePyInst %p\n", this->pMakePyInst);
     this->pInstance = PyObject_CallObject(this->pMakePyInst, pArgs);
     Py_DECREF(pArgs);
-    if (pInstance == NULL) Bad("Can't make instance of class");
+    if (this->pInstance == NULL) Bad("Can't make instance of class");
 
     // Get the processArray function ref
     Py_XDECREF(this->pProcessArray);
@@ -412,6 +416,7 @@ asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {
 }           
 
 /** Update instance param dict from param list */
+// Called with GIL taken, this->lock taken
 asynStatus adPythonPlugin::updateParamDict() { 
     // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
@@ -464,6 +469,7 @@ asynStatus adPythonPlugin::updateParamDict() {
 }
 
 /** Update param list from instance param dict */
+// Called with GIL taken, this->lock taken
 asynStatus adPythonPlugin::updateParamList(int atinit) { 
     // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
@@ -521,6 +527,7 @@ asynStatus adPythonPlugin::updateParamList(int atinit) {
 }
 
 /** Update instance param dict from param list */
+// Called with GIL taken, this->lock taken
 asynStatus adPythonPlugin::updateAttrDict(NDArray *pArray) {
     // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
@@ -593,6 +600,7 @@ asynStatus adPythonPlugin::updateAttrDict(NDArray *pArray) {
 }
 
 /** Update param list from instance attr dict */
+// Called with GIL taken, this->lock taken
 asynStatus adPythonPlugin::updateAttrList() {
      // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
