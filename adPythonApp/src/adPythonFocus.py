@@ -17,7 +17,7 @@ MORPH_GAUSSIAN_BLUR=8
 MORPH_MEDIAN_BLUR=9
 
 # Set a debug logging level in the local logger
-logging.getLogger(".".join([__name__, "Focus"])).setLevel(logging.DEBUG)
+#logging.getLogger("CAM.F").setLevel(logging.DEBUG)
 
 class Focus(AdPythonPlugin):
     def __init__(self):
