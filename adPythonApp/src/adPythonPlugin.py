@@ -11,7 +11,7 @@ import os, logging
 #logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s:  %(message)s', level=logging.INFO)
 #logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s  %(filename)s:%(lineno)d %(funcName)s():  %(message)s', level=logging.INFO)
 #logging.basicConfig(format='%(asctime)s %(levelname)8s %(filename)20s:%(lineno)d %(funcName)16s():  %(message)s', level=logging.INFO)
-logging.basicConfig(format='%(asctime)s %(name)s %(filename)s:%(lineno)d: %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)8s %(filename)s:%(lineno)d: %(message)s', level=logging.INFO)
 
 # define a helper function that imports a python filename and returns an 
 # instance of classname which is contained in it
@@ -22,10 +22,10 @@ def makePyInst(portname, filename, classname):
     try:
         f = open(filename)
         pymodule, ext = os.path.splitext(os.path.basename(filename))
+        AdPythonPlugin.log = log        
         mod = imp.load_module(pymodule, f, filename, (ext, 'U', 1))
         f.close()
         inst = getattr(mod, classname)()
-        inst.log = log
         inst.paramChanged()
         return inst
     except:
@@ -35,10 +35,15 @@ def makePyInst(portname, filename, classname):
 class AdPythonPlugin(object):   
     # Will be our param dict
     _params = None
+    # Will be our logger when used in conjunction with makePyInst()
+    log = None
     
     # init our param dict
     def __init__(self, params={}):
         self._params = dict(params)
+        # self.log is the logger associated with AdPythonPlugin, copy it
+        # and define it as the logger just for this instance...
+        self.log = self.log
 
     # get a param value
     def __getitem__(self, param):

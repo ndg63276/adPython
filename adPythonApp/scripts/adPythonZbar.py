@@ -8,11 +8,10 @@ sys.path.append('/dls_sw/work/tools/RHEL6-x86_64/zbar/prefix/lib/python2.7/site-
 import zbar
 import logging
 
-# Set a debug logging level in the local logger
-logging.getLogger("CAM.Z").setLevel(logging.DEBUG)
-
 class Zbar(AdPythonPlugin):
     def __init__(self):
+        # turn on debugging just for this class
+        self.log.setLevel(logging.DEBUG)
         params = dict(data = "", type = "", count = 0, quality = 0, busy = 0)
         AdPythonPlugin.__init__(self, params)
         

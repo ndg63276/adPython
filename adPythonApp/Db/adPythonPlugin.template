@@ -71,9 +71,7 @@ record(bi, "$(P)$(R)ReadFile_RBV")
     field(DTYP, "asynInt32")
     field(INP,  "@asyn($(PORT),0,$(TIMEOUT))ADPYTHON_LOAD")
     field(ZNAM, "Done")
-    field(ZSV,  "NO_ALARM")
     field(ONAM, "Reading")
-    field(OSV,  "MINOR")
     field(SCAN, "I/O Intr")
 }
 

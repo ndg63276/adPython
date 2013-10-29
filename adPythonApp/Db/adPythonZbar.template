@@ -38,5 +38,4 @@ record(longin, "$(P)$(R)NumBarcodes") {
 record(busy, "$(P)$(R)Busy") {
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))busy")
-    field(SCAN, "I/O Intr")
 }

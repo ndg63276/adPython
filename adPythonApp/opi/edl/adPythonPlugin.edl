@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 425
-y 311
+x 546
+y 394
 w 390
 h 130
 font "arial-bold-r-12.0"
@@ -247,47 +247,6 @@ value {
 }
 endObjectProperties
 
-# (Message Button)
-object activeMessageButtonClass
-beginObjectProperties
-major 4
-minor 1
-release 0
-x 290
-y 75
-w 65
-h 20
-fgColor index 19
-onColor index 4
-offColor index 3
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)ReadFile"
-pressValue "1"
-onLabel "Read File"
-offLabel "Read File"
-3d
-useEnumNumeric
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Byte)
-object ByteClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 360
-y 75
-w 20
-h 20
-controlPv "$(P)$(R)ReadFile_RBV"
-lineColor index 14
-onColor index 15
-offColor index 19
-numBits 1
-endObjectProperties
-
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
@@ -324,5 +283,47 @@ bgColor index 10
 fill
 font "arial-bold-r-12.0"
 fontAlign "center"
+endObjectProperties
+
+# (Byte)
+object ByteClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 360
+y 75
+w 20
+h 20
+controlPv "$(P)$(R)ReadFile_RBV"
+lineColor index 14
+onColor index 15
+offColor index 19
+lineWidth 0
+numBits 1
+endObjectProperties
+
+# (Message Button)
+object activeMessageButtonClass
+beginObjectProperties
+major 4
+minor 1
+release 0
+x 290
+y 75
+w 65
+h 20
+fgColor index 25
+onColor index 4
+offColor index 4
+topShadowColor index 1
+botShadowColor index 11
+controlPv "$(P)$(R)ReadFile"
+pressValue "1"
+onLabel "Read File"
+offLabel "Read File"
+3d
+useEnumNumeric
+font "arial-bold-r-12.0"
 endObjectProperties
 
