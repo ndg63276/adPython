@@ -465,6 +465,9 @@ asynStatus adPythonPlugin::updateParamDict() {
     PyObject *pRet = PyObject_CallObject(this->pParamChanged, NULL);
     if (pRet == NULL) Bad("Calling paramChanged failed\n");
     
+    // Update any parameters that may have changed in the paramChanged callback to python
+    this->updateParamList(0);
+
     return asynSuccess;
 }
 
