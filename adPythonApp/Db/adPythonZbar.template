@@ -1,0 +1,42 @@
+# % macro, P, Device Prefix
+# % macro, R, Device Suffix
+# % macro, PORT, Asyn Port name
+# % macro, TIMEOUT, Timeout
+# % macro, ADDR, Asyn Port address
+# % gui, $(PORT), edmtab, adPythonZbar.edl, P=$(P),R=$(R)
+
+record(waveform, "$(P)$(R)BarcodeData")
+{
+    field(DTYP, "asynOctetRead")
+    field(INP,  "@asyn($(PORT),0,$(TIMEOUT))data")
+    field(FTVL, "CHAR")
+    field(NELM, "256")
+    field(SCAN, "I/O Intr")
+}
+
+record(waveform, "$(P)$(R)BarcodeType")
+{
+    field(DTYP, "asynOctetRead")
+    field(INP,  "@asyn($(PORT),0,$(TIMEOUT))type")
+    field(FTVL, "CHAR")
+    field(NELM, "256")
+    field(SCAN, "I/O Intr")
+}
+
+record(longin, "$(P)$(R)BarcodeQuality") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))quality")
+    field(SCAN, "I/O Intr")
+}
+
+record(longin, "$(P)$(R)NumBarcodes") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))count")
+    field(SCAN, "I/O Intr")
+}
+
+record(busy, "$(P)$(R)Busy") {
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))busy")
+    field(SCAN, "I/O Intr")
+}
