@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 108
-y 252
+x 112
+y 275
 w 390
 h 820
 font "arial-bold-r-12.0"
@@ -307,7 +307,7 @@ w 120
 h 30
 fgColor index 25
 onColor index 4
-offColor index 11
+offColor index 4
 topShadowColor index 1
 botShadowColor index 11
 controlPv "$(P)$(R)Busy"
