@@ -1,0 +1,8 @@
+O.*
+bin/
+lib/
+data/
+iocs/
+*.pyc
+*~
+
