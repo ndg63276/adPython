@@ -9,12 +9,12 @@ class Template(AdPythonPlugin):
         # Make some generic parameters
         # You can change the Name fields on the EDM screen here
         # Hide them by making their name -1
-        params = dict(int1 = 0,    int1Name = "Int 1",
-                      int2 = 0,    int2Name = "Int 2",
-                      int3 = 0,    int3Name = "-1",
-                      double1 = 0, double1Name = "Double 1",
-                      double2 = 0, double2Name = "Double 2",
-                      double3 = 0, double3Name = "-1")
+        params = dict(int1 = 1,      int1Name = "Int 1",
+                      int2 = 2,      int2Name = "Int 2",
+                      int3 = 3,      int3Name = "-1",
+                      double1 = 1.0, double1Name = "Double 1",
+                      double2 = 2.0, double2Name = "Double 2",
+                      double3 = 3.0, double3Name = "-1")
         AdPythonPlugin.__init__(self, params)
         
     def paramChanged(self):

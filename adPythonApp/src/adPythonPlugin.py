@@ -6,29 +6,32 @@ try:
 except:
     pass
 
-import os, logging
+import imp, os, logging
 
-#logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s:  %(message)s', level=logging.INFO)
-#logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)20s  %(filename)s:%(lineno)d %(funcName)s():  %(message)s', level=logging.INFO)
-#logging.basicConfig(format='%(asctime)s %(levelname)8s %(filename)20s:%(lineno)d %(funcName)16s():  %(message)s', level=logging.INFO)
 logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)8s %(filename)s:%(lineno)d: %(message)s', level=logging.INFO)
 
 # define a helper function that imports a python filename and returns an 
 # instance of classname which is contained in it
 def makePyInst(portname, filename, classname):
-    import imp
+    # Create a logger associated with this portname
     log = logging.getLogger(portname)
-    log.info("Creating %s:%s with portname %s", filename, classname, portname)
+    log.info("Creating %s:%s with portname %s", 
+        os.path.basename(filename), classname, portname)
     try:
+        # This dance is needed to load a file explicitly from a filename
         f = open(filename)
         pymodule, ext = os.path.splitext(os.path.basename(filename))
         AdPythonPlugin.log = log        
         mod = imp.load_module(pymodule, f, filename, (ext, 'U', 1))
         f.close()
+        # Get classname ref from this module and make an instance of it
         inst = getattr(mod, classname)()
+        # Call paramChanged it might do some useful setup
         inst.paramChanged()
         return inst
     except:
+        # Log the exception in the logger as the C caller will throw away the
+        # exception text
         log.exception("Creating %s:%s threw exception", filename, classname)
         raise
 
@@ -71,6 +74,8 @@ class AdPythonPlugin(object):
         try:
             return self.paramChanged()
         except:
+            # Log the exception in the logger as the C caller will throw away 
+            # the exception text        
             self.log.exception("Error calling paramChanged()")
             raise
     
@@ -79,11 +84,14 @@ class AdPythonPlugin(object):
         try:
             return self.processArray(arr, attr)
         except:
+            # Log the exception in the logger as the C caller will throw away 
+            # the exception text        
             self.log.exception("Error calling processArray()")
             raise
         
     # called when run offline
     def runOffline(self):
+        # we need the cv2 lib for reading files and the highgui
         import cv2
         cv2.namedWindow('result')
 
@@ -94,12 +102,13 @@ class AdPythonPlugin(object):
         while True:
             # Change params
             self._log.info( "Params: %s", self )
-            param = raw_input("Param name to change (return to process image)? ")
+            param = raw_input("Param name to change (return processes image)? ")
             if param in self:
                 typ = type(self[param])
                 val = raw_input("Param value? ")
                 try:
                     self[param] = typ(val)
+                    self.paramChanged()
                 except:
                     # The exception information is automatically added 
                     # to a Logger.exception() msg

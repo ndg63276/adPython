@@ -20,6 +20,7 @@
 // adPythonPlugin.py not working
 #define UGLY 2
 
+// Some macros to set an error state and print a message
 #define NoGood(errString, st) {                         \
     asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,    \
         "%s:%s: " errString "\n",                       \
@@ -30,12 +31,15 @@
     PyErr_Clear();                                      \
     return asynError;                                   \
 }
-
 #define Bad(errString) NoGood(errString, BAD)
 #define Ugly(errString) NoGood(errString, UGLY)
 
+// Used in error printing
 const char *driverName = "adPythonPlugin";
 
+// This holds the threadState of the thread that initialised python
+// We need it to get a handle on the interpreter so create a threadState
+// object for each port
 static PyThreadState *mainThreadState = NULL;
 
 adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
@@ -81,8 +85,8 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
         PyEval_InitThreads();
         Py_Initialize();
     
-        // Be sure to save thread state otherwise other thread's PyGILState_Ensure()
-        // calls will hang. This releases the GIL
+        // Be sure to save thread state to release the GIL and give a handle
+        // on the interpreter to this and other ports
         mainThreadState = PyEval_SaveThread();
     }
     
@@ -112,10 +116,13 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
 }
 
 /** Callback function that is called by the NDArray driver with new NDArray data
-  * Does image statistics.
+  * Calls the relevant user python code, stamps any outgoing array with
+  * attributes from the code, then updates the internal param list from the user
+  * param dict before returning any outgoing numpy array as an NDArray.
   * \param[in] pArray  The NDArray from the callback.
+  * 
+  * Called with this->lock taken
   */
-// Called with this->lock taken
 void adPythonPlugin::processCallbacks(NDArray *pArray) {
     // First call the base class method
     NDPluginDriver::processCallbacks(pArray);
@@ -124,7 +131,9 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     if (this->pluginState != GOOD) return;
 
     // We have to modify our python dict to match our param list
-    // so unlock and wait until any dictionary access has finished
+    // Note: to avoid deadlocks we should always take locks in order:
+    //  dictMutex, then GIL, then this->lock
+    // so unlock here to preserve this order
     this->unlock();
     epicsMutexLock(this->dictMutex);
 
@@ -178,14 +187,24 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     }
 }
 
-// Called with this->lock taken
+/** Called when asyn clients call pasynInt32->write().
+  * This function does a write of a user parameter to the param list, then
+  * updates the user param dict to match. It also reloads the user python lib
+  * if requested.
+  * \param[in] pasynUser pasynUser structure that encodes the reason and address.
+  * \param[in] value Value to write. 
+  * 
+  * Called with this->lock taken
+  */
 asynStatus adPythonPlugin::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     int status = asynSuccess;
     int param = pasynUser->reason;
     if (param == adPythonLoad || 
             (this->nextParam && param >= adPythonUserParams[0])) {
         // We have to modify our python dict to match our param list
-        // so unlock and wait until any dictionary access has finished
+        // Note: to avoid deadlocks we should always take locks in order:
+        //  dictMutex, then GIL, then this->lock
+        // so unlock here to preserve this order
         this->unlock();
         epicsMutexLock(this->dictMutex);
         // Make sure we're allowed to use the python API
@@ -212,14 +231,23 @@ asynStatus adPythonPlugin::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     return (asynStatus) status;
 }
 
-// Called with this->lock taken
+/** Called when asyn clients call pasynFloat64->write().
+  * This function does a write of a user parameter to the param list, then
+  * updates the user param dict to match.
+  * \param[in] pasynUser pasynUser structure that encodes the reason and address.
+  * \param[in] value Value to write. 
+  * 
+  * Called with this->lock taken
+  */
 asynStatus adPythonPlugin::writeFloat64(asynUser *pasynUser, 
                                         epicsFloat64 value) {
     int status = asynSuccess;
     int param = pasynUser->reason;
     if (this->nextParam && param >= adPythonUserParams[0]) {
         // We have to modify our python dict to match our param list
-        // so unlock and wait until any dictionary access has finished
+        // Note: to avoid deadlocks we should always take locks in order:
+        //  dictMutex, then GIL, then this->lock
+        // so unlock here to preserve this order
         this->unlock();
         epicsMutexLock(this->dictMutex);
         // Make sure we're allowed to use the python API
@@ -238,14 +266,25 @@ asynStatus adPythonPlugin::writeFloat64(asynUser *pasynUser,
     return (asynStatus) status;
 }
 
-// Called with this->lock taken
+/** Called when asyn clients call pasynOctet->write().
+  * This function does a write of a user parameter to the param list, then
+  * updates the user param dict to match.
+  * \param[in] pasynUser pasynUser structure that encodes the reason and address.
+  * \param[in] value Address of the string to write.
+  * \param[in] nChars Number of characters to write.
+  * \param[out] nActual Number of characters actually written.
+  * 
+  * Called with this->lock taken
+  */  
 asynStatus adPythonPlugin::writeOctet(asynUser *pasynUser, const char *value, 
                                       size_t maxChars, size_t *nActual) {
     int status = asynSuccess;
     int param = pasynUser->reason;
     if (this->nextParam && param >= adPythonUserParams[0]) {
         // We have to modify our python dict to match our param list
-        // so unlock and wait until any dictionary access has finished
+        // Note: to avoid deadlocks we should always take locks in order:
+        //  dictMutex, then GIL, then this->lock
+        // so unlock here to preserve this order
         this->unlock();
         epicsMutexLock(this->dictMutex);
         // Make sure we're allowed to use the python API
@@ -264,8 +303,11 @@ asynStatus adPythonPlugin::writeOctet(asynUser *pasynUser, const char *value,
     return (asynStatus) status;
 }
 
-// This is where we import our supporting module
-// Called with GIL taken, this->lock taken
+/** Called once when the module is initialised. Imports the python support
+  * lib and creates dictMutex. If this fails it is not recoverable from.
+  * 
+  * Called with GIL taken, this->lock taken.
+  */ 
 asynStatus adPythonPlugin::importAdPythonModule() {
     // Create the epicsMutex for locking access to our param dict
     this->dictMutex = epicsMutexCreate();
@@ -287,8 +329,11 @@ asynStatus adPythonPlugin::importAdPythonModule() {
     return asynSuccess;   
 }
 
-/** Import the user class from the pathname and make an instance of it */
-// Called with GIL taken, dictMutex taken, this->lock taken
+/** Called when the module is initialised and when the user clicks the ReadFile
+  * button. Imports the user python file and makes an instance of the class
+  * 
+  * Called with dictMutex taken, GIL taken, this->lock taken.
+  */ 
 asynStatus adPythonPlugin::makePyInst() {     
     char filename[BIGBUFFER], classname[BIGBUFFER];
     
@@ -310,7 +355,6 @@ asynStatus adPythonPlugin::makePyInst() {
            
     // Create instance of this class, freeing the old one if it exists
     Py_XDECREF(this->pInstance);
-    printf("this->pMakePyInst %p\n", this->pMakePyInst);
     this->pInstance = PyObject_CallObject(this->pMakePyInst, pArgs);
     Py_DECREF(pArgs);
     if (this->pInstance == NULL) Bad("Can't make instance of class");
@@ -337,14 +381,20 @@ asynStatus adPythonPlugin::makePyInst() {
     return asynSuccess; 
 }
 
-// Called with GIL taken, this->lock taken
+/** Called by processCallbacks(). Creates a numpy array from an NDArray,
+  * then wraps it and the pAttrs dictionary in a tuple ready to pass to the
+  * user class.
+  * \param[in] pArray NDArray structure to wrap
+  * 
+  * Called with dictMutex taken, GIL taken, this->lock taken.
+  */ 
 asynStatus adPythonPlugin::wrapArray(NDArray *pArray) {      
-    // Return if no array to operate on
-    if (pArray == NULL) return asynError;
-    
     // Return if we aren't good
     if (this->pluginState != GOOD) return asynError;
-    
+
+    // Return if no array to operate on
+    if (pArray == NULL) return asynError;
+        
     // Release the last produced array
     if (this->pArrays[0]) {
         this->pArrays[0]->release();    
@@ -363,6 +413,7 @@ asynStatus adPythonPlugin::wrapArray(NDArray *pArray) {
         Bad("Can't lookup numpy format for dataType");
         
     // Wrap the existing data from the NDArray in a numpy array
+    // TODO: this should be read only, but can't work out how to make it so...
     PyObject* pValue = PyArray_SimpleNewFromData(pArray->ndims, npy_dims, 
         npy_fmt, pArray->pData);   
     if (pValue == NULL) Bad("Cannot make numpy array");
@@ -370,7 +421,7 @@ asynStatus adPythonPlugin::wrapArray(NDArray *pArray) {
     // Construct argument list, don't increment pValue so it is destroyed with
     // pProcessArgs
     Py_XDECREF(this->pProcessArgs);
-    this->pProcessArgs = Py_BuildValue("(NO)", pValue, pAttrs);
+    this->pProcessArgs = Py_BuildValue("(NO)", pValue, this->pAttrs);
     if (this->pProcessArgs == NULL) {
         Py_DECREF(pValue);    
         Bad("Cannot build tuple for processArray()");
@@ -378,12 +429,18 @@ asynStatus adPythonPlugin::wrapArray(NDArray *pArray) {
     return asynSuccess;
 }
 
-// Called with GIL taken, this->lock taken
+/** Called by processCallbacks(). Creates an NDArray from the return value
+  * of a python class.
+  * \param[in] pValue PyObject which will be wrapped if it is a numpy array
+  * 
+  * Called with dictMutex taken, GIL taken, this->lock taken.
+  */ 
 asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {     
-     NDArrayInfo arrayInfo;
-
     // Return if we aren't good
     if (this->pluginState != GOOD) return asynError;
+
+    // Return if no object to operate on
+    if (pValue == NULL) return asynError;
     
     // Check return value for existance    
     if (pValue == NULL) Bad("processArray() call failed");
@@ -412,13 +469,21 @@ asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {
 
     // TODO: could avoid this memcpy if we could pass an existing
     // buffer to NDArray *AND* have it call a user free function
+    NDArrayInfo arrayInfo;    
     this->pArrays[0]->getInfo(&arrayInfo);
     memcpy(this->pArrays[0]->pData, PyArray_DATA(pValue), arrayInfo.totalBytes);              
     return asynSuccess; 
 }           
 
-/** Update instance param dict from param list */
-// Called with GIL taken, this->lock taken
+/** Called by writexxx(). Updates the python param dict with values from the
+  * param list.
+  * 
+  * Called with dictMutex taken, GIL taken, this->lock taken.
+  */ 
+// TODO: we should make a python wrapper to the param list that handles the
+// param getting and setting better. The only issue is that user python code is
+// currently called without this->lock(). Probably not an issue to add it in,
+// just needs thinking about
 asynStatus adPythonPlugin::updateParamDict() { 
     // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
@@ -473,8 +538,13 @@ asynStatus adPythonPlugin::updateParamDict() {
     return asynSuccess;
 }
 
-/** Update param list from instance param dict */
-// Called with GIL taken, this->lock taken
+/** Called after any user python call (in makePyInst(), updateParamList() or
+  * processCallbacks()). Updates the internal param list with values from
+  * the python param dict.
+  * \param[in] atinit If 1 then create params, otherwise just update their vals
+  * 
+  * Called with dictMutex taken, GIL taken, this->lock taken.
+  */ 
 asynStatus adPythonPlugin::updateParamList(int atinit) { 
     // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
@@ -531,27 +601,38 @@ asynStatus adPythonPlugin::updateParamList(int atinit) {
     return asynSuccess;
 }
 
-/** Update instance param dict from param list */
-// Called with GIL taken, this->lock taken
+/** Called by processCallbacks(). Creates an attribute python dict and updates
+  * it with values from the incoming attribute list of the array and from any
+  * parameters defined by this plugin.
+  * \param[in] pArray NDArray input object
+  * 
+  * Called with dictMutex taken, GIL taken, this->lock taken.
+  */ 
+// TODO: as with the param dict, it probably makes sense to expose the param
+// list directly to python, although it's less of a performance hit here as
+// we don't often have many attributes compared to params  
 asynStatus adPythonPlugin::updateAttrDict(NDArray *pArray) {
     // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
+
+    // Return if no array to operate on
+    if (pArray == NULL) return asynError;
      
     // Make a blank dict for the attributes
     Py_XDECREF(this->pAttrs);
     this->pAttrs = PyDict_New();
-    if (pAttrs == NULL) Bad("Cannot make attribute dict");     
+    if (this->pAttrs == NULL) Bad("Cannot make attribute dict");     
      
     /* Construct an attribute list. We use a separate attribute list
-    * from the one in pArray to avoid the need to copy the array. */
-    /* First clear the list*/
+     * from the one in pArray to avoid the need to copy the array.
+     * First clear the list*/
     this->pFileAttributes->clear();
     
     /* Now get the current values of the attributes for this plugin */
     this->getAttributes(this->pFileAttributes);
 
     /* Now append the attributes from the array which are already up to date from
-    * the driver and prior plugins */
+     * the driver and prior plugins */
     pArray->pAttributeList->copy(this->pFileAttributes);    
            
     // Fill it in
@@ -563,8 +644,10 @@ asynStatus adPythonPlugin::updateAttrDict(NDArray *pArray) {
         pAttr->getValueInfo(&attrDataType, &attrDataSize);
         void *value = calloc(1, attrDataSize);
         pAttr->getValue(attrDataType, value, attrDataSize);         
-        /* If the attribute is a string, attrDataSize is the length of the string including the 0 terminator,
-           otherwise it is the size in bytes of the specific data type */
+        /* If the attribute is a string, attrDataSize is the length of the 
+         * string including the 0 terminator, otherwise it is the size in bytes 
+         * of the specific data type
+         */
         switch(attrDataType) {
             case(NDAttrInt8):
             case(NDAttrUInt8):
@@ -604,8 +687,12 @@ asynStatus adPythonPlugin::updateAttrDict(NDArray *pArray) {
     return asynSuccess;
 }
 
-/** Update param list from instance attr dict */
-// Called with GIL taken, this->lock taken
+/** Called by processCallbacks(). Updates the attribute list on the outgoing
+  * NDArray with values from the attribute python dict modified by the user
+  * python code.
+  * 
+  * Called with dictMutex taken, GIL taken, this->lock taken.
+  */ 
 asynStatus adPythonPlugin::updateAttrList() {
      // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
@@ -650,7 +737,6 @@ struct pix_lookup {
     int npy_fmt;
     NDDataType_t ad_fmt;
 };
-
 static const struct pix_lookup pix_lookup[] = {
    { NPY_INT8,     NDInt8 },     /**< Signed 8-bit integer */
    { NPY_UINT8,    NDUInt8 },    /**< Unsigned 8-bit integer */

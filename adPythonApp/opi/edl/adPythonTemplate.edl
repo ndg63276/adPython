@@ -3,7 +3,7 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 106
+x 324
 y 284
 w 390
 h 820
@@ -48,7 +48,7 @@ release 0
 x 5
 y 530
 w 380
-h 235
+h 155
 lineColor index 14
 fill
 fillColor index 3
@@ -572,5 +572,27 @@ endGroup
 visPv "$(P)$(R)Int1Name_RBV"
 visMin "0"
 visMax "1"
+endObjectProperties
+
+# (Shell Command)
+object shellCmdClass
+beginObjectProperties
+major 4
+minor 3
+release 0
+x 5
+y 795
+w 380
+h 20
+fgColor index 14
+bgColor index 3
+topShadowColor index 1
+botShadowColor index 11
+font "arial-bold-r-12.0"
+buttonLabel "HTML Doc"
+numCmds 1
+command {
+  0 "firefox file://$(which adPythonPlugin.edl | sed \"s|data/adPythonPlugin.edl|documentation/doxygen/adPythonTemplate_8template.html|\") &"
+}
 endObjectProperties
 

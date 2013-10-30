@@ -12,7 +12,6 @@ record(longin, "$(P)$(R)Int1_RBV") {
 }
 
 record(longout, "$(P)$(R)Int1") {
-    field(PINI, "YES")
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))int1")
 }
@@ -30,7 +29,6 @@ record(longin, "$(P)$(R)Int2_RBV") {
 }
 
 record(longout, "$(P)$(R)Int2") {
-    field(PINI, "YES")
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))int2")
 }
@@ -48,7 +46,6 @@ record(longin, "$(P)$(R)Int3_RBV") {
 }
 
 record(longout, "$(P)$(R)Int3") {
-    field(PINI, "YES")
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))int3")
 }
@@ -60,15 +57,14 @@ record(stringin, "$(P)$(R)Int3Name_RBV") {
 }
 
 record(ai, "$(P)$(R)Double1_RBV") {
-    field(DTYP, "asynInt32")
+    field(DTYP, "asynFloat64")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))double1")
     field(SCAN, "I/O Intr")
     field(PREC, "3")
 }
 
 record(ao, "$(P)$(R)Double1") {
-    field(PINI, "YES")
-    field(DTYP, "asynInt32")
+    field(DTYP, "asynFloat64")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))double1")
     field(PREC, "3")
 }
@@ -80,15 +76,14 @@ record(stringin, "$(P)$(R)Double1Name_RBV") {
 }
 
 record(ai, "$(P)$(R)Double2_RBV") {
-    field(DTYP, "asynInt32")
+    field(DTYP, "asynFloat64")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))double2")
     field(SCAN, "I/O Intr")
     field(PREC, "3")
 }
 
 record(ao, "$(P)$(R)Double2") {
-    field(PINI, "YES")
-    field(DTYP, "asynInt32")
+    field(DTYP, "asynFloat64")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))double2")
     field(PREC, "3")
 }
@@ -100,15 +95,14 @@ record(stringin, "$(P)$(R)Double2Name_RBV") {
 }
 
 record(ai, "$(P)$(R)Double3_RBV") {
-    field(DTYP, "asynInt32")
+    field(DTYP, "asynFloat64")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))double3")
     field(SCAN, "I/O Intr")
     field(PREC, "3")
 }
 
 record(ao, "$(P)$(R)Double3") {
-    field(PINI, "YES")
-    field(DTYP, "asynInt32")
+    field(DTYP, "asynFloat64")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))double3")
     field(PREC, "3")
 }
