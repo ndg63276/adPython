@@ -389,8 +389,10 @@ asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {
     if (pValue == NULL) Bad("processArray() call failed");
            
     // If it wasn't an array, just return here
-    if (!PyObject_IsInstance(pValue, (PyObject*) (&PyArray_Type))) 
+    if (!PyObject_IsInstance(pValue, (PyObject*) (&PyArray_Type))) {
+        this->pArrays[0] = NULL;
         return asynSuccess;
+    }
     
     // We must have an array, so find the dataType from it
     NDDataType_t ad_fmt;
@@ -607,7 +609,10 @@ asynStatus adPythonPlugin::updateAttrDict(NDArray *pArray) {
 asynStatus adPythonPlugin::updateAttrList() {
      // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
-    
+
+    // Ignore and return if we did not get an a new array out
+    if (this->pArrays[0] == NULL) return asynSuccess;
+
     // Return if we don't have an attribute dict to read from
     if (this->pAttrs == NULL) Bad("Attribute dict is null");
 
@@ -628,7 +633,7 @@ asynStatus adPythonPlugin::updateAttrList() {
             long value = PyInt_AsLong(pValue);
             this->pArrays[0]->pAttributeList->add(paramStr, paramStr, NDAttrInt32, &value);
         } else if (PyString_Check(pValue)) {     
-            char *value = PyString_AsString(pValue);     
+            char *value = PyString_AsString(pValue);
             this->pArrays[0]->pAttributeList->add(paramStr, paramStr, NDAttrString, value);
         } else {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,

@@ -32,7 +32,7 @@ class Zbar(AdPythonPlugin):
 
     def processArray(self, arr, attr):
         # got a new image to process
-        self.log.debug("arr size: %s", arr.shape)
+        #self.log.debug("arr size: %s", arr.shape)
         
         # Create a zbar image wrapper around the raw data from the array
         # Assumption here is that the array is a 2D, 8bpp greyscale image.
@@ -43,19 +43,21 @@ class Zbar(AdPythonPlugin):
         self.scanner.scan(zimg)
         
         symbol = None
+        count = 0
         for symbol in zimg:
+            count += 1
             self.log.debug("type: %6s    quality: %d     data: %s", \
                            symbol.type, symbol.quality, symbol.data )
-            #self.log.debug("Locations: %s", str(symbol.location))
+            self.log.debug("Locations: %s", str(symbol.location))
 
-        dest = arr        
+        dest = None
         if symbol != None:
             # Only update results if user is waiting for a result or if a new barcode
             # has been spotted.
             self.log.debug('_busy=%d   _data_latch=%s', self._busy, self._data_latch)
             if (self._busy == 1) or (symbol.data != self._data_latch and symbol.data != ""):
                 self._data_latch = symbol.data
-                self['count'] = symbol.count
+                self['count'] = count
                 self['data'] = symbol.data
                 self['type'] = str(symbol.type)
                 self['quality'] = symbol.quality
@@ -63,13 +65,12 @@ class Zbar(AdPythonPlugin):
                 self._busy = 0
                 self['busy'] = 0
 
-                #points = numpy.array(symbol.location, numpy.int32)
-                #polygons = points.reshape((-1, 1, 2))
+                points = numpy.array(symbol.location, numpy.int32)
+                polygons = points.reshape((-1, 1, 2))
                 #self.log.debug("Polygons: %s", str(polygons))
-                #dest = cv2.polylines(arr, [polygons], True, 255)
-                dest = arr
-
-                self.log.info("results: %s", str(self._params))
+                dest = numpy.array(arr)
+                cv2.polylines(dest, [polygons], True, 0, 5)
+                self.log.info("Drawing. Output: %s", str(dest.shape))
         #self.log.debug("dest: %s", str(dest))
         return dest
 
