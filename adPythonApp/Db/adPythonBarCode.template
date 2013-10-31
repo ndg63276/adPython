@@ -3,7 +3,7 @@
 # % macro, PORT, Asyn Port name
 # % macro, TIMEOUT, Timeout
 # % macro, ADDR, Asyn Port address
-# % gui, $(PORT), edmtab, adPythonZbar.edl, P=$(P),R=$(R)
+# % gui, $(PORT), edmtab, adPythonBarCode.edl, P=$(P),R=$(R)
 
 record(waveform, "$(P)$(R)BarcodeData")
 {
