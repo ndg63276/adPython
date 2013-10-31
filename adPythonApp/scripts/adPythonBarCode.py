@@ -82,18 +82,20 @@ class DmtxDecoder(BarCodeDecoder):
         self.symbols = []
         # The threshold argument is an barcode symbol edge threshold (transition from white to black) 
         # as a relative term from 0-100. Edges below the threshold level will be ignored.
-        dm_read = pydmtx.DataMatrix(max_count = 1, timeout = 1000, 
-                                    scheme = pydmtx.DataMatrix.DmtxSchemeAscii, 
-                                    shape=pydmtx.DataMatrix.DmtxSymbolSquareAuto,
-                                    threshold=threshold)
+        dm_read = pydmtx.DataMatrix(max_count = 1, timeout = 30000)
+        #                            scheme = pydmtx.DataMatrix.DmtxSchemeAutoBest, 
+        #                            shape=pydmtx.DataMatrix.DmtxSymbolSquareAuto,
+        #                            threshold=threshold)
         self.log.debug("New DMTX: options=%s", dm_read.options)
         self.log.debug('Decoding DMTX (%s)', str(array.shape))
-        # FIXME: Warning: the DataMatrix.decode function segfaults after 4-5 iterations!
-        # The segfault backtrace all the way down in the bowels of the C library libdmtx.
-        # Unsure whether or not the python bindings have some part in this (doesn't look like it
-        # on the surface - but this can be complicated)
+        
+        # Create a fake RGB array as the pydmtx is making the assumption that
+        # the input data is in 3 channels for RGB
+        rgb_array = numpy.array([array,array,array])
+        
+        # Attempt to decode the 'RGB' image
         dm_read.decode( array.shape[0], array.shape[1], 
-                              buffer(array))
+                              buffer(rgb_array))
         num_hits = dm_read.count()
         self.log.debug('Decoded DMTX (%d)', num_hits)
         self.log.debug('DMTX results: %s', dm_read.results)
