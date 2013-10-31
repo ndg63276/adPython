@@ -40,16 +40,15 @@ record(busy, "$(P)$(R)Busy") {
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))busy")
 }
 
-record(longin, "$(P)$(R)Threshold") {
+record(longin, "$(P)$(R)Threshold_RBV") {
     field(DTYP, "asynInt32")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))threshold")
     field(SCAN, "I/O Intr")
 }
 
-record(longin, "$(P)$(R)Threshold") {
+record(longout, "$(P)$(R)Threshold") {
     field(DTYP, "asynInt32")
-    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))threshold")
-    field(SCAN, "I/O Intr")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))threshold")
 }
 
 record(mbbi, "$(P)$(R)Scanner_RBV")

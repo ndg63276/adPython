@@ -19,7 +19,7 @@ class BarCodeSymbol:
         self.quality = 0
         
     def __str__(self):
-        s = "<BarCodeSymbol type=\'%s\', data=\'%s\', quality=%d >" % (self.type, self.data, self.quality)
+        s = "<BarCodeSymbol type=\'%s\', data=\'%s\', quality=%d, points:%d>" % (self.type, self.data, self.quality, len(self.polygon))
         return s
     
     def points_to_polygon(self, points):
@@ -40,7 +40,7 @@ class BarCodeDecoder:
         self.symbols = []
         
     def __str__(self):
-        s = "< BarDecoder symbols: %s >" % str(self.symbols)
+        s = "< BarDecoder symbols: %s >" % str([str(s) for s in self.symbols])
         return s
         
     def decode(self, array, threshold = 50):
@@ -74,36 +74,51 @@ class DmtxDecoder(BarCodeDecoder):
     '''Use the pydmtx - python bindings for libdmtx to decode Data Matrix barcodes'''
     def __init__(self, logger='DmtxDecoder'):
         BarCodeDecoder.__init__(self, logger)
-        self._dm_read = pydmtx.DataMatrix(max_count = 1, timeout = 5000)
+        self.log.setLevel(logging.DEBUG)
+        #self._dm_read = pydmtx.DataMatrix(max_count = 1, timeout = 2000, scheme = pydmtx.DataMatrix.DmtxSchemeAutoFast)
+        #self.log.debug("DMTX: options=%s", self._dm_read.options)
         
     def decode(self, array, threshold = 50):
         self.symbols = []
         # The threshold argument is an barcode symbol edge threshold (transition from white to black) 
         # as a relative term from 0-100. Edges below the threshold level will be ignored.
-        self._dm_read.decode( array.shape[0], array.shape[1], 
-                              buffer(array), threshold=threshold)
-        num_hits = self._dm_read.count()
+        dm_read = pydmtx.DataMatrix(max_count = 1, timeout = 1000, 
+                                    scheme = pydmtx.DataMatrix.DmtxSchemeAscii, 
+                                    shape=pydmtx.DataMatrix.DmtxSymbolSquareAuto,
+                                    threshold=threshold)
+        self.log.debug("New DMTX: options=%s", dm_read.options)
+        self.log.debug('Decoding DMTX (%s)', str(array.shape))
+        # FIXME: Warning: the DataMatrix.decode function segfaults after 4-5 iterations!
+        # The segfault backtrace all the way down in the bowels of the C library libdmtx.
+        # Unsure whether or not the python bindings have some part in this (doesn't look like it
+        # on the surface - but this can be complicated)
+        dm_read.decode( array.shape[0], array.shape[1], 
+                              buffer(array))
+        num_hits = dm_read.count()
+        self.log.debug('Decoded DMTX (%d)', num_hits)
+        self.log.debug('DMTX results: %s', dm_read.results)
         for i in range(num_hits):
             symbol = BarCodeSymbol()
-            symbol.data = str(self._dm_read.message(i))
-            symbol.type = str(self._dm_read.stats(i))
+            symbol.data = str(dm_read.message(i))
+            symbol.type = str(dm_read.stats(i))
             self.symbols.append(symbol)
         self.symbols = BarCodeSymbol.quality_sorted( self.symbols )
+        del(dm_read)
         return len(self.symbols)
 
 
 
 class BarCode(AdPythonPlugin):
-    self.SCANNER_ALL= 0
-    self.SCANNER_DMTX = 1
-    self.SCANNER_ZBAR = 2
+    SCANNER_ALL= 0
+    SCANNER_DMTX = 2
+    SCANNER_ZBAR = 1
 
     def __init__(self):
-        self.log.setLevel(logging.DEBUG)
-        params = dict(data = "", type = "", count = 0, quality = 0, threshold = 10, 
-                      busy = 0, scanner = self.SCANNER_ALL)
+        #self.log.setLevel(logging.DEBUG)
+        params = dict(data = "", type = "", count = 0, quality = 0, threshold = 25, 
+                      busy = 0, scanner = self.SCANNER_ZBAR)
         AdPythonPlugin.__init__(self, params)
-        self.scanners = { 'zbar': ZBarDecoder(), 'dmtx': DmtxDecoder() }
+        self.scanners = { self.SCANNER_ZBAR: ZBarDecoder(), self.SCANNER_DMTX: DmtxDecoder() }
         self._busy = 0
         
     def paramChanged(self):
@@ -136,7 +151,8 @@ class BarCode(AdPythonPlugin):
         # Abort if no barcodes was found
         if count == 0: return None
         
-        self.log.debug('Found symbols: %s', decoder.symbols)
+        self.log.debug('Found %d symbols (%s)', count, str(decoder))
+
         # Find the best quality result of the scan
         symbol = decoder.symbols[0]
         
@@ -146,6 +162,14 @@ class BarCode(AdPythonPlugin):
                              symbol.quality, self['threshold'], str(decoder))
             return None
         
+        self.log.info('Symbol found: %s', str(symbol))
+        # Update the user parameters with the symbol data and details
+        self['count'] = count
+        self['data'] = symbol.data
+        self['type'] = symbol.type
+        self['quality'] = symbol.quality
+        self['busy'] = 0
+     
         # Take a copy of the input array in order to return a new array
         dest = numpy.array(arr)
         
