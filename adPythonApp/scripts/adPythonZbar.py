@@ -78,6 +78,8 @@ class DmtxDecoder(BarCodeDecoder):
         
     def decode(self, array, threshold = 50):
         self.symbols = []
+        # The threshold argument is an barcode symbol edge threshold (transition from white to black) 
+        # as a relative term from 0-100. Edges below the threshold level will be ignored.
         self._dm_read.decode( array.shape[0], array.shape[1], 
                               buffer(array), threshold=threshold)
         num_hits = self._dm_read.count()
@@ -115,7 +117,7 @@ class BarCode(AdPythonPlugin):
             self['quality'] = 0
     
     def processArray(self, arr, attr):
-        # If the user has not started scanning then abort immidiately
+        # If the user has not started scanning then abort immediately
         if not self['busy'] == 1: return None
         
         # Work out which of the decoders to use - or all of them
@@ -131,7 +133,7 @@ class BarCode(AdPythonPlugin):
             count = decoder.decode( arr, threshold = self['threshold'] )
             if count > 0: break
         
-        # Abort if no barcode was found
+        # Abort if no barcodes was found
         if count == 0: return None
         
         self.log.debug('Found symbols: %s', decoder.symbols)
@@ -155,72 +157,5 @@ class BarCode(AdPythonPlugin):
         
         return dest
         
-
-class Zbar(AdPythonPlugin):
-    def __init__(self):
-        # turn on debugging just for this class
-        self.log.setLevel(logging.DEBUG)
-        params = dict(data = "", type = "", count = 0, quality = 0, busy = 0)
-        AdPythonPlugin.__init__(self, params)
-        
-        self.scanner = zbar.ImageScanner()
-        self.scanner.parse_config('enable')
-        self._busy = 0
-        self._data_latch = ""
-        
-    def paramChanged(self):
-        # Check if user has made busy record busy
-        if self['busy'] == 1 and (self['busy'] != self._busy):
-            self.log.debug('Starting scan!')
-            self._busy = 1
-            self['count'] = 0
-            self['data'] = ""
-            self['type'] = ""
-            self['quality'] = 0
-
-    def processArray(self, arr, attr):
-        # got a new image to process
-        #self.log.debug("arr size: %s", arr.shape)
-        
-        # Create a zbar image wrapper around the raw data from the array
-        # Assumption here is that the array is a 2D, 8bpp greyscale image.
-        # TODO: support other image types
-        zimg = zbar.Image( arr.shape[0], arr.shape[1], 'Y800', arr.tostring() )
-        
-        # Scan image wrapper for barcodes. Results are attached to the zimg object
-        self.scanner.scan(zimg)
-        
-        symbol = None
-        count = 0
-        for symbol in zimg:
-            count += 1
-            self.log.debug("type: %6s    quality: %d     data: %s", \
-                           symbol.type, symbol.quality, symbol.data )
-            self.log.debug("Locations: %s", str(symbol.location))
-
-        dest = None
-        if symbol != None:
-            # Only update results if user is waiting for a result or if a new barcode
-            # has been spotted.
-            self.log.debug('_busy=%d   _data_latch=%s', self._busy, self._data_latch)
-            if (self._busy == 1) or (symbol.data != self._data_latch and symbol.data != ""):
-                self._data_latch = symbol.data
-                self['count'] = count
-                self['data'] = symbol.data
-                self['type'] = str(symbol.type)
-                self['quality'] = symbol.quality
-                # clear the busy flag
-                self._busy = 0
-                self['busy'] = 0
-
-                points = numpy.array(symbol.location, numpy.int32)
-                polygons = points.reshape((-1, 1, 2))
-                #self.log.debug("Polygons: %s", str(polygons))
-                dest = numpy.array(arr)
-                cv2.polylines(dest, [polygons], True, 0, 5)
-                self.log.info("Drawing. Output: %s", str(dest.shape))
-        #self.log.debug("dest: %s", str(dest))
-        return dest
-
 if __name__=="__main__":
     Focus().runOffline()

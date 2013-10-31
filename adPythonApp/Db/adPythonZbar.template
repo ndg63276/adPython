@@ -39,3 +39,40 @@ record(busy, "$(P)$(R)Busy") {
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))busy")
 }
+
+record(longin, "$(P)$(R)Threshold") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))threshold")
+    field(SCAN, "I/O Intr")
+}
+
+record(longin, "$(P)$(R)Threshold") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))threshold")
+    field(SCAN, "I/O Intr")
+}
+
+record(mbbi, "$(P)$(R)Scanner_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),0,$(TIMEOUT))scanner")
+    field(ZRST, "all")
+    field(ZRVL, "0")
+    field(ONST, "zbar")
+    field(ONVL, "1")
+    field(TWST, "dmtx")
+    field(TWVL, "2")
+    field(SCAN, "I/O Intr")
+}
+
+record(mbbo, "$(P)$(R)Scanner")
+{
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),0,$(TIMEOUT))scanner")
+    field(ZRST, "all")
+    field(ZRVL, "0")
+    field(ONST, "zbar")
+    field(ONVL, "1")
+    field(TWST, "dmtx")
+    field(TWVL, "2")
+}
