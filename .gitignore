@@ -8,4 +8,6 @@ iocs/
 dbd/
 db/
 documentation/
+.DS_Store
+._*
 
