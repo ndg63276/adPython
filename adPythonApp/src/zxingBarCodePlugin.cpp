@@ -40,29 +40,56 @@ zxingBarCodePlugin::zxingBarCodePlugin(const char *portNameArg,
 {
     // Create the base class parameters (our python class may make some more)
     setStringParam(NDPluginDriverPluginType, zxDriverName);
+    createParam("zxbc_busy",        asynParamInt32,   &zxbc_busy);
     createParam("zxbc_data",        asynParamOctet,   &zxbc_data);
     createParam("zxbc_type",        asynParamOctet,   &zxbc_type);
     createParam("zxbc_count",       asynParamInt32,   &zxbc_count);
-    createParam("zxbc_location_x",  asynParamFloat64, &zxbc_location_x);    
-    createParam("zxbc_location_y",  asynParamFloat64, &zxbc_location_y);    
-    createParam("zxbc_size_x",      asynParamFloat64, &zxbc_size_x);    
-    createParam("zxbc_size_y",      asynParamFloat64, &zxbc_size_y);    
+    createParam("zxbc_location_x1",  asynParamFloat64, &zxbc_location_x1);
+    createParam("zxbc_location_y1",  asynParamFloat64, &zxbc_location_y1);
+    createParam("zxbc_location_x2",  asynParamFloat64, &zxbc_location_x2);
+    createParam("zxbc_location_y2",  asynParamFloat64, &zxbc_location_y2);
+    createParam("zxbc_location_x3",  asynParamFloat64, &zxbc_location_x3);
+    createParam("zxbc_location_y3",  asynParamFloat64, &zxbc_location_y3);
+    createParam("zxbc_location_x4",  asynParamFloat64, &zxbc_location_x4);
+    createParam("zxbc_location_y4",  asynParamFloat64, &zxbc_location_y4);
 
+    setIntegerParam(zxbc_busy, 0);
     setStringParam(zxbc_data,   "");
     setStringParam(zxbc_type,  "");
     callParamCallbacks();
 }
 
-void zxingBarCodePlugin::processCallbacks(NDArray *pArray) {
+void zxingBarCodePlugin::processCallbacks(NDArray *pArray)
+{
     // First call the base class method
     NDPluginDriver::processCallbacks(pArray);
 
+    // Check datatype. Only support 8bit grey
+    if (!(pArray->dataType == NDInt8 or pArray->dataType == NDUInt8)) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR, "zxing only support 8bpp greyscale images. Aborting scan.\n");
+        return;
+    }
+
+    NDArrayInfo_t arr_info;
+    pArray->getInfo(&arr_info);
+
     // Convert the buffer to something that the library understands.
-    Ref<LuminanceSource> source (new BufferBitmapSource(pArray->dims[1].size, pArray->dims[0].size, (char*)pArray->pData));
+    Ref<LuminanceSource> source (new BufferBitmapSource(arr_info.xSize, arr_info.ySize, (char*)pArray->pData));
     // Turn it into a binary image.
     Ref<Binarizer> binarizer (new GlobalHistogramBinarizer(source));
     Ref<BinaryBitmap> image(new BinaryBitmap(binarizer));
     Ref<BitMatrix> matrix(image->getBlackMatrix());
+
+    // Extract the thresholded/histogrammed binary image that zxing is analysing to find the barcode
+    size_t dims[2];
+    dims[0] = (size_t)image->getWidth();
+    dims[1] = (size_t)image->getHeight();
+    NDArray *pArrOut = this->pNDArrayPool->alloc(2, dims, NDUInt8, 0, NULL);
+    for (int x = 0; x < matrix->getWidth(); x++) {
+    	for (int y = 0; y < matrix->getHeight(); y++) {
+    		*((unsigned char*)(pArrOut->pData)+(y*matrix->getWidth() + x)) = matrix->get(x,y) ? 0 : 255;
+    	}
+    }
 
     // Tell the decoder to try as hard as possible.
     DecodeHints hints(DecodeHints::DATA_MATRIX_HINT);
@@ -78,30 +105,83 @@ void zxingBarCodePlugin::processCallbacks(NDArray *pArray) {
     } catch (zxing::Exception& e)
     {
         // Did not find a symbol in the image
-        asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "%s\n", e.what());
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "Found no symbols. Zxing says: \"%s\"\n", e.what());
+        count = 0;
     }
 
     if (count > 0) {
         // Output the DataMatrix result.
         asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "SUCCESS: found %d hits!\n" \
-        "         Type: %s\n" \
-        "         Data: \"%s\"\n",
-        count, BarcodeFormat::barcodeFormatNames[dm_result->getBarcodeFormat()], 
-        BarcodeFormat::barcodeFormatNames[dm_result->getBarcodeFormat()]);
+        			"         Type: \"%s\"\n" \
+        			"         Data: \"%s\"\n",
+        			count, BarcodeFormat::barcodeFormatNames[dm_result->getBarcodeFormat()],
+        			dm_result->getText()->getText().c_str());
+        int busy = 0;
+        getIntegerParam(zxbc_busy, &busy);
+        if (busy == 1) {
+        	// Only update the results if the user has requested a scan.
+        	// Otherwise we might accidentally overwrite a previous result.
+            setStringParam(zxbc_data, dm_result->getText()->getText().c_str());
+            setStringParam(zxbc_type, BarcodeFormat::barcodeFormatNames[dm_result->getBarcodeFormat()]);
+            setIntegerParam(zxbc_count, count);
 
-        setStringParam(zxbc_data, dm_result->getText()->getText().c_str());
-        setStringParam(zxbc_type, BarcodeFormat::barcodeFormatNames[dm_result->getBarcodeFormat()]);
-        setIntegerParam(zxbc_count, count);
-        
-        setDoubleParam(zxbc_location_x, dm_result->getResultPoints()[0]->getX() );
-        setDoubleParam(zxbc_location_y, dm_result->getResultPoints()[0]->getY() );
-        //setDoubleParam(zxbc_size_x, );
-        //setDoubleParam(zxbc_size_y, );
-        callParamCallbacks();       
+            setDoubleParam(zxbc_location_x1, dm_result->getResultPoints()[0]->getX() );
+            setDoubleParam(zxbc_location_y1, dm_result->getResultPoints()[0]->getY() );
+            setDoubleParam(zxbc_location_x2, dm_result->getResultPoints()[1]->getX() );
+            setDoubleParam(zxbc_location_y2, dm_result->getResultPoints()[1]->getY() );
+            setDoubleParam(zxbc_location_x3, dm_result->getResultPoints()[2]->getX() );
+            setDoubleParam(zxbc_location_y3, dm_result->getResultPoints()[2]->getY() );
+            setDoubleParam(zxbc_location_x4, dm_result->getResultPoints()[3]->getX() );
+            setDoubleParam(zxbc_location_y4, dm_result->getResultPoints()[3]->getY() );
+            setIntegerParam(zxbc_busy, 0); // Done now
+            callParamCallbacks();
+        }
     } else {
         // Nothing found
     }
+
+    // Output the binary bitmap image as a result
+    if (pArrOut) {
+        this->unlock();
+        doCallbacksGenericPointer(pArrOut, NDArrayData, 0);
+        this->lock();
+        pArrOut->release();
+    }
+
+    callParamCallbacks();
 }
+
+
+asynStatus zxingBarCodePlugin::writeInt32(asynUser *pasynUser, epicsInt32 value)
+{
+	int status = asynSuccess;
+	int param = pasynUser->reason;
+	if (param == zxbc_busy) {
+		int previous = 0;
+		getIntegerParam(zxbc_busy, &previous);
+		if (value==1 && value != previous) {
+			// User has requested a new scan to start so clear the previous results
+			asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "User started scan. Clearing results.\n");
+			setStringParam(zxbc_data, "");
+			setStringParam(zxbc_type, "");
+			setIntegerParam(zxbc_count, 0);
+			setDoubleParam(zxbc_location_x1, 0.0);
+			setDoubleParam(zxbc_location_y1, 0.0);
+			setDoubleParam(zxbc_location_x2, 0.0);
+			setDoubleParam(zxbc_location_y2, 0.0);
+			setDoubleParam(zxbc_location_x3, 0.0);
+			setDoubleParam(zxbc_location_y3, 0.0);
+			setDoubleParam(zxbc_location_x4, 0.0);
+			setDoubleParam(zxbc_location_y4, 0.0);
+		}
+		setIntegerParam(zxbc_busy, value);
+	} else {
+		status |= NDPluginDriver::writeInt32(pasynUser, value);
+	}
+	callParamCallbacks();
+	return (asynStatus) status;
+}
+
 
 /** Configuration routine.  Called directly, or from the iocsh function in NDFileEpics */
 static int zxingBarCodeConfigure(const char *portNameArg, int queueSize, int blockingCallbacks,
