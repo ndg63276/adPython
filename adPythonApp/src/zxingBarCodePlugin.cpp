@@ -25,7 +25,7 @@ using namespace zxing::qrcode;
 using namespace zxing::datamatrix;
 using namespace qrviddec;
 
-const char *driverName = "zxingBarCodePlugin";
+const char *zxDriverName = "zxingBarCodePlugin";
 
 zxingBarCodePlugin::zxingBarCodePlugin(const char *portNameArg, 
         int queueSize, int blockingCallbacks,
@@ -39,7 +39,7 @@ zxingBarCodePlugin::zxingBarCodePlugin(const char *portNameArg,
                    ASYN_MULTIDEVICE, 1, priority, stackSize)
 {
     // Create the base class parameters (our python class may make some more)
-    setStringParam(NDPluginDriverPluginType, driverName);
+    setStringParam(NDPluginDriverPluginType, zxDriverName);
     createParam("zxbc_data",        asynParamOctet,   &zxbc_data);
     createParam("zxbc_type",        asynParamOctet,   &zxbc_type);
     createParam("zxbc_count",       asynParamInt32,   &zxbc_count);
