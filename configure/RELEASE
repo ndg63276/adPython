@@ -29,6 +29,7 @@ ASYN=$(SUPPORT)/asyn/4-21
 AREADETECTOR=$(SUPPORT)/areaDetector/1-9dls4
 PYTHON=/dls_sw/work/tools/RHEL6-x86_64/Python/prefix
 #PYTHON=/dls_sw/prod/tools/RHEL6-x86_64/Python/2-7-3/prefix
+ZXING=/dls_sw/prod/tools/RHEL6-x86_64/zxing/2-2/prefix
 
 # EPICS_BASE usually appears last so other apps can override stuff:
 EPICS_BASE=/dls_sw/epics/R3.14.12.3/base
