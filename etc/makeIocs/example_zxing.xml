@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<components arch="linux-x86">
+	<areaDetector.URLDriver ADDR="0" P="ADPYTHONTEST" PORT="CAM.URL" R=":URL:" TIMEOUT="1"/>
+	<adPython.zxingBarCodePlugin ADDR="0" Enabled="1" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.URL" P="ADPYTHONTEST" PORT="CAM.ZX" R=":ZXING:" TIMEOUT="1"/>
+	<areaDetector.NDOverlay ADDR="0" Enabled="1" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.ZX" P="ADPYTHONTEST" PORT="CAM.DRAW" R=":DRAW:" TIMEOUT="1"/>
+	<areaDetector.NDStdArrays ADDR="0" Enabled="1" FTVL="UCHAR" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.DRAW" NELEMENTS="1280000" P="ADPYTHONTEST" PORT="CAM.ARR1" R=":ARR1:" TIMEOUT="1" TYPE="Int8"/>
+	<areaDetector.NDProcess ADDR="0" Enabled="1" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.URL" P="ADPYTHONTEST" PORT="CAM.PROC" R=":PROC:" TIMEOUT="1"/>
+	<EPICS_BASE.StartupCommand command="dbpf(&quot;ADPYTHONTEST:ZXING:PoolUsedMem.SCAN&quot;, &quot;Passive&quot;)" post_init="True"/>
+	<EPICS_BASE.StartupCommand command="dbpf(&quot;ADPYTHONTEST:URL:AcquirePeriod&quot;, &quot;1&quot;)" post_init="True"/>
+	<EPICS_BASE.StartupCommand command="dbpf(&quot;ADPYTHONTEST:URL:Acquire&quot;, &quot;0&quot;)" post_init="True"/>
+	<EPICS_BASE.StartupCommand command="asynSetTraceMask CAM.ZX 0 0x11" post_init="True"/>
+	<EPICS_BASE.StartupCommand command="dbpf(&quot;ADPYTHONTEST:DRAW:1:Use&quot;, 1)" post_init="True"/>
+	<EPICS_BASE.StartupCommand command="dbpf(&quot;ADPYTHONTEST:DRAW:1:Shape&quot;, 0)" post_init="True"/>
+	<EPICS_BASE.StartupCommand command="dbpf(&quot;ADPYTHONTEST:DRAW:1:PositionXLink.DOL&quot;, &quot;ADPYTHONTEST:ZXING:PosX1_RBV CP&quot;)" post_init="True"/>
+	<EPICS_BASE.StartupCommand command="dbpf(&quot;ADPYTHONTEST:DRAW:1:PositionYLink.DOL&quot;, &quot;ADPYTHONTEST:ZXING:PosY1_RBV CP&quot;)" post_init="True"/>
+	<EPICS_BASE.StartupCommand command="dbpf(&quot;ADPYTHONTEST:DRAW:1:SizeX&quot;, 20)" post_init="True"/>
+	<EPICS_BASE.StartupCommand command="dbpf(&quot;ADPYTHONTEST:DRAW:1:SizeY&quot;, 20)" post_init="True"/>
+</components>
