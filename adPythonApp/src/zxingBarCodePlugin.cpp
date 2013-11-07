@@ -78,17 +78,23 @@ void zxingBarCodePlugin::processCallbacks(NDArray *pArray)
     // Turn it into a binary image.
     Ref<Binarizer> binarizer (new GlobalHistogramBinarizer(source));
     Ref<BinaryBitmap> image(new BinaryBitmap(binarizer));
-    Ref<BitMatrix> matrix(image->getBlackMatrix());
+    
+    NDArray *pArrOut = NULL;
+    try {
+        Ref<BitMatrix> matrix(image->getBlackMatrix());
 
-    // Extract the thresholded/histogrammed binary image that zxing is analysing to find the barcode
-    size_t dims[2];
-    dims[0] = (size_t)image->getWidth();
-    dims[1] = (size_t)image->getHeight();
-    NDArray *pArrOut = this->pNDArrayPool->alloc(2, dims, NDUInt8, 0, NULL);
-    for (int x = 0; x < matrix->getWidth(); x++) {
-    	for (int y = 0; y < matrix->getHeight(); y++) {
-    		*((unsigned char*)(pArrOut->pData)+(y*matrix->getWidth() + x)) = matrix->get(x,y) ? 0 : 255;
-    	}
+        // Extract the thresholded/histogrammed binary image that zxing is analysing to find the barcode
+        size_t dims[2];
+        dims[0] = (size_t)image->getWidth();
+        dims[1] = (size_t)image->getHeight();
+        pArrOut = this->pNDArrayPool->alloc(2, dims, NDUInt8, 0, NULL);
+        for (int x = 0; x < matrix->getWidth(); x++) {
+        	for (int y = 0; y < matrix->getHeight(); y++) {
+        		*((unsigned char*)(pArrOut->pData)+(y*matrix->getWidth() + x)) = matrix->get(x,y) ? 0 : 255;
+        	}
+        }
+    } catch (zxing::Exception& e) {
+        asynPrint(this->pasynUserSelf, ASYN_TRACE_FLOW, "Found no BlackMatrix. Zxing says: \"%s\"\n", e.what());
     }
 
     // Tell the decoder to try as hard as possible.
