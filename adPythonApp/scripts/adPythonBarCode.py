@@ -1,15 +1,11 @@
 #!/usr/bin/env dls-python
-from adPythonPlugin import AdPythonPlugin
-import cv2
 import numpy
 import sys
 import logging
 
-sys.path.append('/dls_sw/work/tools/RHEL6-x86_64/zbar/prefix/lib/python2.7/site-packages')
+from adPythonPlugin import AdPythonPlugin
+import cv2
 import zbar
-
-sys.path.append('/dls_sw/work/tools/RHEL6-x86_64/pydmtx/prefix/lib/python2.7/site-packages')
-import pydmtx
 
 class BarCodeSymbol:
     def __init__(self):
@@ -70,49 +66,9 @@ class ZBarDecoder(BarCodeDecoder):
         self.symbols = BarCodeSymbol.quality_sorted( self.symbols )
         return len(self.symbols)
 
-class DmtxDecoder(BarCodeDecoder):
-    '''Use the pydmtx - python bindings for libdmtx to decode Data Matrix barcodes'''
-    def __init__(self, logger='DmtxDecoder'):
-        BarCodeDecoder.__init__(self, logger)
-        self.log.setLevel(logging.DEBUG)
-        #self._dm_read = pydmtx.DataMatrix(max_count = 1, timeout = 2000, scheme = pydmtx.DataMatrix.DmtxSchemeAutoFast)
-        #self.log.debug("DMTX: options=%s", self._dm_read.options)
-        
-    def decode(self, array, threshold = 50):
-        self.symbols = []
-        # The threshold argument is an barcode symbol edge threshold (transition from white to black) 
-        # as a relative term from 0-100. Edges below the threshold level will be ignored.
-        dm_read = pydmtx.DataMatrix(max_count = 1, timeout = 30000)
-        #                            scheme = pydmtx.DataMatrix.DmtxSchemeAutoBest, 
-        #                            shape=pydmtx.DataMatrix.DmtxSymbolSquareAuto,
-        #                            threshold=threshold)
-        self.log.debug("New DMTX: options=%s", dm_read.options)
-        self.log.debug('Decoding DMTX (%s)', str(array.shape))
-        
-        # Create a fake RGB array as the pydmtx is making the assumption that
-        # the input data is in 3 channels for RGB
-        rgb_array = numpy.array([array,array,array])
-        
-        # Attempt to decode the 'RGB' image
-        dm_read.decode( array.shape[0], array.shape[1], 
-                              buffer(rgb_array))
-        num_hits = dm_read.count()
-        self.log.debug('Decoded DMTX (%d)', num_hits)
-        self.log.debug('DMTX results: %s', dm_read.results)
-        for i in range(num_hits):
-            symbol = BarCodeSymbol()
-            symbol.data = str(dm_read.message(i))
-            symbol.type = str(dm_read.stats(i))
-            self.symbols.append(symbol)
-        self.symbols = BarCodeSymbol.quality_sorted( self.symbols )
-        del(dm_read)
-        return len(self.symbols)
-
-
 
 class BarCode(AdPythonPlugin):
     SCANNER_ALL= 0
-    SCANNER_DMTX = 2
     SCANNER_ZBAR = 1
 
     def __init__(self):
@@ -120,7 +76,7 @@ class BarCode(AdPythonPlugin):
         params = dict(data = "", type = "", count = 0, quality = 0, threshold = 25, 
                       busy = 0, scanner = self.SCANNER_ZBAR)
         AdPythonPlugin.__init__(self, params)
-        self.scanners = { self.SCANNER_ZBAR: ZBarDecoder(), self.SCANNER_DMTX: DmtxDecoder() }
+        self.scanners = { self.SCANNER_ZBAR: ZBarDecoder() }
         self._busy = 0
         
     def paramChanged(self):

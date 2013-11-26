@@ -59,8 +59,6 @@ record(mbbi, "$(P)$(R)Scanner_RBV")
     field(ZRVL, "0")
     field(ONST, "zbar")
     field(ONVL, "1")
-    field(TWST, "dmtx")
-    field(TWVL, "2")
     field(SCAN, "I/O Intr")
 }
 
@@ -72,6 +70,4 @@ record(mbbo, "$(P)$(R)Scanner")
     field(ZRVL, "0")
     field(ONST, "zbar")
     field(ONVL, "1")
-    field(TWST, "dmtx")
-    field(TWVL, "2")
 }
