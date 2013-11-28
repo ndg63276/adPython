@@ -16,7 +16,6 @@ DB += adPythonTemplate.template
 DB += adPythonMorph.template
 DB += adPythonFocus.template
 DB += adPythonBarCode.template
-DB += zxingBarCode.template
 
 #----------------------------------------------------
 # In a Diamond IOC Application, build db files from

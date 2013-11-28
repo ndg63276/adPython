@@ -4,11 +4,10 @@ import cv2
 import numpy
 import logging
 
-# Set a debug logging level in the local logger
-#logging.getLogger("CAM.F").setLevel(logging.DEBUG)
-
 class Focus(AdPythonPlugin):
     def __init__(self):
+        # Set a debug logging level in the local logger
+        #self.log.setLevel(logging.DEBUG)    
         params = dict(ksize = 3, prefilter = 0, iters = 1,
                       sum = 0.0, filtered_mean = 0.0, filtered_stddev = 0.0)
         AdPythonPlugin.__init__(self, params)

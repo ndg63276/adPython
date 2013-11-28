@@ -1,7 +1,7 @@
 from iocbuilder import Device, AutoSubstitution
 from iocbuilder.arginfo import *
 
-from iocbuilder.modules.areaDetector import AreaDetector, _NDPluginBase, _NDPluginProducerBase
+from iocbuilder.modules.areaDetector import AreaDetector, _NDPluginBase
 
 class AdPython(Device):
     '''Library dependencies for adPython'''
@@ -48,14 +48,5 @@ class adPythonPlugin(_NDPluginBase):
             'plugin callbacks', int),
         MEMORY = Simple('Max memory to allocate, should be maxw*maxh*nbuffer '
             'for driver and all attached plugins', int))
-
-
-class _zxingBarCodeBase(AutoSubstitution):
-    '''This plugin Works out the area and tip of a sample'''
-    TemplateFile = "zxingBarCode.template"
-
-class zxingBarCodePlugin(_NDPluginProducerBase ):
-    _SpecificTemplate = _zxingBarCodeBase
-    Dependencies = (AdPython,)
 
 

@@ -15,6 +15,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)8s %(filename)s:%(
 def makePyInst(portname, filename, classname):
     # Create a logger associated with this portname
     log = logging.getLogger(portname)
+    log.setLevel(logging.INFO) 
     log.info("Creating %s:%s with portname %s", 
         os.path.basename(filename), classname, portname)
     try:
@@ -82,6 +83,9 @@ class AdPythonPlugin(object):
     # called when a new array is generated
     def _processArray(self, arr, attr):
         try:
+            # Tell numpy that it does not own the data in arr, so it is read only
+            # This should really be done at the C layer, but it's much easier here!        
+            arr.flags.writeable = False            
             return self.processArray(arr, attr)
         except:
             # Log the exception in the logger as the C caller will throw away 

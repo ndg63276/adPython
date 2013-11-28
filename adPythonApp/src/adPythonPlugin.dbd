@@ -1,2 +1,2 @@
 registrar("adPythonPluginRegister")
-registrar("zxingBarCodePluginRegister")
+

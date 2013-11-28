@@ -413,7 +413,7 @@ asynStatus adPythonPlugin::wrapArray(NDArray *pArray) {
         Bad("Can't lookup numpy format for dataType");
         
     // Wrap the existing data from the NDArray in a numpy array
-    // TODO: this should be read only, but can't work out how to make it so...
+    // When created, this is writable, but the python layer sets it readonly
     PyObject* pValue = PyArray_SimpleNewFromData(pArray->ndims, npy_dims, 
         npy_fmt, pArray->pData);   
     if (pValue == NULL) Bad("Cannot make numpy array");
@@ -439,15 +439,11 @@ asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {
     // Return if we aren't good
     if (this->pluginState != GOOD) return asynError;
 
-    // Return if no object to operate on
-    if (pValue == NULL) return asynError;
-    
     // Check return value for existance    
     if (pValue == NULL) Bad("processArray() call failed");
            
     // If it wasn't an array, just return here
     if (!PyObject_IsInstance(pValue, (PyObject*) (&PyArray_Type))) {
-        this->pArrays[0] = NULL;
         return asynSuccess;
     }
     
