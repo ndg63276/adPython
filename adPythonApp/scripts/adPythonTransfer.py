@@ -7,10 +7,8 @@ import time
 
 from pkg_resources import require
 require('pyzmq')
+require('msgpack-python')
 import zmq
-
-sys.path.insert(0, '/dls_sw/work/tools/RHEL6-x86_64/python-blosc/prefix/lib/python2.7/site-packages')
-sys.path.insert(0, '/dls_sw/work/tools/RHEL6-x86_64/msgpack-python/prefix/lib/python2.7/site-packages')
 
 import blosc
 import msgpack
