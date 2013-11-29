@@ -77,7 +77,7 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
 
     // First we tell python where to find adPythonPlugin.py
     char buffer[BIGBUFFER];
-    snprintf(buffer, sizeof(buffer), "PYTHONPATH=/dls_sw/work/tools/RHEL6-x86_64/OpenCV/prefix/lib/python2.7/site-packages:%s", DATADIR);
+    snprintf(buffer, sizeof(buffer), "PYTHONPATH=%s", DATADIR);
     putenv(buffer);
     
     // Now we initialise python

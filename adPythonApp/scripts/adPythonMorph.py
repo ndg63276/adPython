@@ -43,4 +43,4 @@ class Morph(AdPythonPlugin):
         return dest
 
 if __name__=="__main__":
-    Morph().runOffline()
+    Morph().runOffline(operation=10, ksize=30, iters=30)

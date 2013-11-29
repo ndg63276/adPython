@@ -40,7 +40,7 @@ class AdPythonPlugin(object):
     # Will be our param dict
     _params = None
     # Will be our logger when used in conjunction with makePyInst()
-    log = None
+    log = logging.getLogger("Offline")
     
     # init our param dict
     def __init__(self, params={}):
@@ -70,6 +70,10 @@ class AdPythonPlugin(object):
     def __repr__(self):
         return repr(self._params)
 
+    # iter
+    def __iter__(self):
+        return iter(self._params)
+
     # called when parameter list changes
     def _paramChanged(self):
         try:
@@ -94,34 +98,7 @@ class AdPythonPlugin(object):
             raise
         
     # called when run offline
-    def runOffline(self):
-        # we need the cv2 lib for reading files and the highgui
-        import cv2
-        cv2.namedWindow('result')
-
-        # prepare input image
-        fn = '/home/tmc43/bwtest-sm.jpg'
-        src = cv2.imread(fn, 0)
-        
-        while True:
-            # Change params
-            self._log.info( "Params: %s", self )
-            param = raw_input("Param name to change (return processes image)? ")
-            if param in self:
-                typ = type(self[param])
-                val = raw_input("Param value? ")
-                try:
-                    self[param] = typ(val)
-                    self.paramChanged()
-                except:
-                    # The exception information is automatically added 
-                    # to a Logger.exception() msg
-                    self.log.exception("Cannot convert '%s' to %s", val, typ) 
-            elif param:
-                self.log.warning("Invalid param name '%s'", param)
-            
-            # Run on image
-            result = self.processArray(src, {})
-            cv2.imshow('result', result)
-            cv2.waitKey(500)
+    def runOffline(self, **ranges):
+        from adPythonOffline import AdPythonOffline
+        AdPythonOffline(self, **ranges)
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env dls-python
 from adPythonPlugin import AdPythonPlugin
-import logging
+import logging, numpy
 
 try:
     # If we have the opencv library then we can use an add that
     # saturates the datatype rather than overflowing
-    from cv2 import add    
+    from cv2 import add
 except ImportError:
     # otherwise we will use the numpy array add operation which is 
     # faster but will overflow
@@ -14,8 +14,8 @@ except ImportError:
 class Template(AdPythonPlugin):
     def __init__(self):
         # The default logging level is INFO.
-        # Uncomment this line to set debug logging on
-        #self.log.setLevel(logging.DEBUG) 
+        # Comment this line to set debug logging off
+        self.log.setLevel(logging.DEBUG) 
         # Make some generic parameters
         # You can change the Name fields on the EDM screen here
         # Hide them by making their name -1
@@ -29,20 +29,32 @@ class Template(AdPythonPlugin):
         
     def paramChanged(self):
         # one of our input parameters has changed
-        # just log it for now, do nothing
-        self.log.debug("Parameter has been changed")
+        # just log it for now, do nothing.
+        self.log.debug("Parameter has been changed %s", self)
 
     def processArray(self, arr, attr):        
         # Called when the plugin gets a new array
         # arr is a numpy array
         # attr is an attribute dictionary that will be attached to the array
         # In our example we will take our array and add int1 to it.
-        out = add(arr, self["int1"])            
+        try:
+            out = add(arr, self["int1"])           
+        except TypeError:
+            # early versions of opencv didn't let you add a scalar to an array
+            out = add(arr, numpy.zeros(arr.shape, arr.dtype) + self["int1"])                        
         # Stamp the output array with the sum of the resultant array by writing
-        # to the attribute dictionary
+        # to the attribute dictionary. Note that we convert from the numpy
+        # uint64 type to a python integer as we only handle python integers,
+        # doubles and strings in the C code for now
         attr["sum"] = int(out.sum())
-        # return the resultant array
+        self.log.debug("Array processed, sum: %d", attr["sum"])        
+        # return the resultant array.
         return out
 
 if __name__=="__main__":
-    Template().runOffline()
+    Template().runOffline(
+        int1=256,            # This has range 0..255
+        int2=(100,200),      # This has range 100..200
+        double1=(0,5,0.001), # This has range 0, 0.001, 0.002 ... 4.999
+        double2=numpy.logspace(1, 5, 3)) # This is 10^1, 10^3, 10^5
+
