@@ -3,6 +3,15 @@
 \section intro_sec Introduction
 adPython is an <a href="http://cars9.uchicago.edu/software/epics/areaDetector.html">areaDetector</a> plugin which allows user python code to be run on each NDArray object, optionally creating NDArray object to pass out.
 
+\section inst_sec Installation
+- Modify configure/RELEASE
+- If you have python and numpy in a standard place then comment out PYTHON_PREFIX, otherwise download and
+   install python and numpy and set that macro to the install prefix you used.
+- Python must be built shared
+- Set AREADETECTOR to the path of areaDetector 1-9
+- Type make
+- Try the example in the \ref user_sec
+
 \section bugs_sec Known Bugs
 These are a wish list for better performance rather than bugs...
 - Parameter list is converted to a python dictionary and back again for each new NDArray. This would be much better (and not too difficult to do) as python bindings to the parameter library
@@ -58,7 +67,7 @@ The function is called whenever the parameter dictionary is changed from EPICS. 
 \skipline processArray
 \until return out
 
-This function is called whenever a new NDArray is passed to the plugin. The numpy array \c arr is a read only array that points to the block of memory owned by the NDArray. The user code can optionally create and return a numpy array as an output that will be copied into a new NDArray. The dictionary \t attr is an attribute dictionary that will be attached to the new NDArray if it is created.
+This function is called whenever a new NDArray is passed to the plugin. The numpy array \c arr is a read only array that points to the block of memory owned by the NDArray. The user code can optionally create and return a numpy array as an output that will be copied into a new NDArray. The dictionary \c attr is an attribute dictionary that will be attached to the new NDArray if it is created.
 
 \skipline name
 \until logspace
@@ -109,11 +118,20 @@ Once you have understood the adPythonTemplate example you can copy it somewhere 
 \subsection new_plugin Writing an adPython script with custom parameters
 
 - Create a new python file in the adPythonApp/scripts directory caller adPython<name>
-- Create a <name> class that subclasses AdPythonPlugin
+- Create a \<name\> class that subclasses AdPythonPlugin
 - Implement the __init__, paramChanged and processArray functions
 - Create a database for all parameters you have defined in the initialiser
 - Create an EDM screen that embeds adPythonPlugin.edl with widgets for all records in the database
 - (DLS only) Add an entry in the builder ArgInfo classname list
+
+\section bench Benchmarks
+a test with a 10Hz URL driver plugin on a 696x816 mono image produced the following CPU loads doing a 7x7 kernel median blur using the openCV library
+- Python: 41.2%
+- Native C: 41.2%
+Each plugin was taking about 26ms to process each image. This rough tests shows that for image processing speeds, the time taken to do the C processing far outweights the time taken to do the python conversions.
+
+\seciont GIL The global interpreter lock
+It should be noted that multiple python plugins within the same IOC will share the same global interpreter lock. This is a feature of C python. Python wrappers to computationally expensive functions like those in numpy and OpenCV generally release the GIL before doing the operation, so this is unlikely to be an issue if you have a few plugins, but does mean that adPython is unlikely to scale infinitely. 
 
 **/
 

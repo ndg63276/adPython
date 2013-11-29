@@ -271,7 +271,7 @@ asynStatus adPythonPlugin::writeFloat64(asynUser *pasynUser,
   * updates the user param dict to match.
   * \param[in] pasynUser pasynUser structure that encodes the reason and address.
   * \param[in] value Address of the string to write.
-  * \param[in] nChars Number of characters to write.
+  * \param[in] maxChars Max number of characters to write.
   * \param[out] nActual Number of characters actually written.
   * 
   * Called with this->lock taken
