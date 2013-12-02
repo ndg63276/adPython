@@ -36,7 +36,7 @@ Display a gui that lets the user interactively change parameters on each image
         self.findex = 0            
         
         # Create a window to show the results in
-        self.window_name = 'result'
+        self.window_name = 'adPythonOffline: %s' % plugin.__class__.__name__
         cv2.namedWindow(self.window_name)
         
         # now create the sliders on the gui
@@ -104,5 +104,5 @@ Display a gui that lets the user interactively change parameters on each image
         src = cv2.imread(self.files[self.findex], self.options.rgb)
         # pass it to the process function
         result = self.plugin.processArray(src, {})
-        cv2.imshow('result', result)
+        cv2.imshow(self.window_name, result)
                 

@@ -24,7 +24,7 @@ class Morph(AdPythonPlugin):
         # one of our input parameters has changed
         ksize = self["ksize"]
         self.element = cv2.getStructuringElement(cv2.MORPH_OPEN, (ksize, ksize))
-        self.log.info('Creating structuring element with ksize=%s', ksize)
+        self.log.debug('Creating structuring element with ksize=%s', ksize)
 
     def processArray(self, arr, attr):
         # got a new image to process

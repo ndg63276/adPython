@@ -54,7 +54,7 @@ class Template(AdPythonPlugin):
 if __name__=="__main__":
     Template().runOffline(
         int1=256,            # This has range 0..255
-        int2=(100,200),      # This has range 100..200
+        int2=(100,200),      # This has range 100..199
         double1=(0,5,0.001), # This has range 0, 0.001, 0.002 ... 4.999
         double2=numpy.logspace(1, 5, 3)) # This is 10^1, 10^3, 10^5
 
