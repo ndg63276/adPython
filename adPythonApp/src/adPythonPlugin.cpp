@@ -448,18 +448,19 @@ asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {
     }
     
     // We must have an array, so find the dataType from it
+    PyArrayObject *pArrayOb = (PyArrayObject *) pValue;
     NDDataType_t ad_fmt;
-    if (lookupAdFormat(PyArray_TYPE(pValue), &ad_fmt)) 
+    if (lookupAdFormat(PyArray_TYPE(pArrayOb), &ad_fmt)) 
         Bad("Can't lookup numpy format for dataType");
     
     // Create a dimension description from numpy array, note the inverse order
     size_t ad_dims[ND_ARRAY_MAX_DIMS];
-    for (int i=0; i<PyArray_NDIM(pValue); i++) {
-        ad_dims[i] = PyArray_DIMS(pValue)[PyArray_NDIM(pValue)-i-1];
+    for (int i=0; i<PyArray_NDIM(pArrayOb); i++) {
+        ad_dims[i] = PyArray_DIMS(pArrayOb)[PyArray_NDIM(pArrayOb)-i-1];
     }
     
     /* Allocate the array */
-    this->pArrays[0] = pNDArrayPool->alloc(PyArray_NDIM(pValue), ad_dims, 
+    this->pArrays[0] = pNDArrayPool->alloc(PyArray_NDIM(pArrayOb), ad_dims, 
         ad_fmt, 0, NULL);
     if (this->pArrays[0] == NULL) Bad("Error allocating buffer");
 
@@ -467,7 +468,7 @@ asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {
     // buffer to NDArray *AND* have it call a user free function
     NDArrayInfo arrayInfo;    
     this->pArrays[0]->getInfo(&arrayInfo);
-    memcpy(this->pArrays[0]->pData, PyArray_DATA(pValue), arrayInfo.totalBytes);              
+    memcpy(this->pArrays[0]->pData, PyArray_DATA(pArrayOb), arrayInfo.totalBytes);              
     return asynSuccess; 
 }           
 

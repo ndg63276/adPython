@@ -21,7 +21,6 @@ USR_CXXFLAGS += -Wcast-align
 USR_CXXFLAGS += -Wwrite-strings
 USR_CXXFLAGS += -Wredundant-decls
 USR_CXXFLAGS += -Wmissing-declarations
-USR_CXXFLAGS += -Wcast-qual
 
 LIBRARY_IOC += adPython
 
@@ -44,10 +43,15 @@ PYTHON_VERSION = $(shell $(PYTHON) -c 'from distutils import sysconfig; \
 
 # link against python
 ifneq ($(PYTHON_PREFIX),)
+    # user defined prefix, add it explicitly
 	USR_INCLUDES += -I$(PYTHON_PREFIX)/include/python$(PYTHON_VERSION)
 	python$(PYTHON_VERSION)_DIR = $(PYTHON_PREFIX)/lib
 	adPython_LIBS += python$(PYTHON_VERSION)
+	# add the numpy include path too, which is printed out when we run
+	# adPythonPlugin.py from the command line
+	USR_INCLUDES += -I$(shell $(PYTHON) ../adPythonPlugin.py)
 else
+    # it's in a standard place
 	adPython_SYS_LIBS += python$(PYTHON_VERSION)
 endif
 

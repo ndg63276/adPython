@@ -6,7 +6,7 @@ try:
 except:
     pass
 
-import imp, os, logging
+import imp, os, logging, numpy
 
 logging.basicConfig(format='%(asctime)s %(levelname)8s %(name)8s %(filename)s:%(lineno)d: %(message)s', level=logging.INFO)
 
@@ -102,3 +102,6 @@ class AdPythonPlugin(object):
         from adPythonOffline import AdPythonOffline
         AdPythonOffline(self, **ranges)
 
+if __name__=="__main__":
+    # If run from the command line, assume we want the location of the numpy lib
+    print numpy.get_include()
