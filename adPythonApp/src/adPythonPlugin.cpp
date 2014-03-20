@@ -164,6 +164,9 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     this->interpretReturn(pValue);
     Py_XDECREF(pValue);
 
+    // copy everything except the data, e.g. uniqueId and timeStamp, attributes
+    if (this->pArrays[0]) this->pNDArrayPool->copy(pArray, this->pArrays[0], 0);
+
     // update param list, this will callParamCallbacks at the end
     this->updateParamList(0);    
 
