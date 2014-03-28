@@ -104,5 +104,8 @@ Display a gui that lets the user interactively change parameters on each image
         src = cv2.imread(self.files[self.findex], self.options.rgb)
         # pass it to the process function
         result = self.plugin.processArray(src, {})
-        cv2.imshow(self.window_name, result)
+        if result is None:
+            cv2.imshow(self.window_name, src)
+        else:        
+            cv2.imshow(self.window_name, result)
                 
