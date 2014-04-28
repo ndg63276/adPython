@@ -32,7 +32,7 @@ class Template(AdPythonPlugin):
         # just log it for now, do nothing.
         self.log.debug("Parameter has been changed %s", self)
 
-    def processArray(self, arr, attr):        
+    def processArray(self, arr, attr={}):        
         # Called when the plugin gets a new array
         # arr is a numpy array
         # attr is an attribute dictionary that will be attached to the array

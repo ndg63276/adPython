@@ -1,10 +1,11 @@
 #!/usr/bin/env dls-python
 from adPythonPlugin import AdPythonPlugin
+from adPythonMorph import Morph
 import logging, cv2
 import numpy as np
 import random
 
-class Template(AdPythonPlugin):
+class Mitegen(AdPythonPlugin):
     def __init__(self):
         # The default logging level is INFO.
         # Comment this line to set debug logging off
@@ -12,27 +13,38 @@ class Template(AdPythonPlugin):
         # Make some generic parameters
         # You can change the Name fields on the EDM screen here
         # Hide them by making their name -1
-        params = dict(canny_thresh = 100,
-                      curve_epsilon = 2,
-                      step = 6,
+        params = dict(
+                      # Morphology
+                      m_operation = 3,
+                      m_ksize = 3,    
+                      m_iters = 1,                      
+                      # Threshold
+                      t_ksize = 11,
+                      t_c = 5,
+                      # Contours for cross finding
+                      curve_epsilon = 8,
                       w_min = 10,
                       w_max = 100,
                       ar = 1.5,
-                      ar_err = 0.15,  
-                      ksize = 3,    
-                      iters = 2,
+                      ar_err = 0.15,
+                      # Canny        
+                      canny_thresh = 75,
+                      # Output
+                      step = 8,                      
                       ltype = -1,
                       lsize = -1, 
-                      micron_pix = 5.13,             
+                      micron_pix = 3.67, # 5.13 for LD_*                      
                       )
+        # import a morphology plugin to do filtering
+        self.morph = Morph()        
         AdPythonPlugin.__init__(self, params)
         
     def paramChanged(self):
         # one of our input parameters has changed
-        # just log it for now, do nothing.
-        ksize = self["ksize"]
-        self.element = cv2.getStructuringElement(cv2.MORPH_OPEN, (ksize, ksize))        
-        self.log.debug("Parameter has been changed %s", self)
+        # pass the morph ones to the morph plugin
+        for p in self.morph:
+            self.morph[p] = self["m_"+p]
+        self.morph.paramChanged()
 
     def get_bounds(self, cnt):
         # Get the bounds of a contour
@@ -62,78 +74,96 @@ class Template(AdPythonPlugin):
             # contour doesn't match width and aspect ratio params
             return None
 
-    def get_dot(self, cnt):
-        x, y, w, h = self.get_bounds(cnt)
+    def get_dots(self, arr, canny, coords):        
         cx, cy, cw, ch = self.cross_params
-        if x > cx - cw * self["ar_err"] and x < cx + (1 + self["ar_err"]) * cw and \
-            y > cy - ch * self["ar_err"] and y < cy + (1 + self["ar_err"]) * ch and \
-            w < cw / 5. and h < ch / 3.:        
-            # got a contour that might be a dot, return it
-            return (x, y, w, h)
-        else:
-            # not a dot
-            return None
+        sums = {}
+        pts = {}
+        for i, coord in enumerate(coords):
+            # get dims of ROI of cross image
+            x = int(cx + coord[0] * (cw + 8) * np.cos(self.angle) / 5. + coord[1] * (ch + 8) * np.sin(self.angle) / 3. - 2)
+            y = int(cy + coord[0] * (cw + 8) * np.sin(self.angle) / 5. + coord[1] * (ch + 8) * np.cos(self.angle) / 3. - 1)            
+            w = int(cw / 5. - 4)
+            h = int(ch / 3. - 5)
+            # get sum of it
+            sums[i] = canny[y:y+w, x:x+w].sum() / 255            
+            pts[i] = (x, y, w, h)
+            print coord, sums[i]            
+        thresh = 0.7 * max(sums.values())
+        print thresh
+        tot = 0            
+        for i, s in sums.items():
+            x, y, w, h = pts[i]
+            if self["step"] == 6:
+                cv2.rectangle(arr, (x, y), (x + w, y + h), (255, 0, 0))              
+            # if sum > thresh then draw a dot
+            if s > thresh:
+                tot += 2**i
+                if self["step"] == 6:
+                    cv2.circle(arr, (x + w/2, y + h/2), h/2, (0, 255, 0), 2)                
+        return tot
 
-    def classify_dot(self, x, y, w, h):
-        cx, cy, cw, ch = self.cross_params
-        # split cross into 3 x 5 segments and see which one they fall into
-        xpos = int((x - cx + w / 2.) * 5. / cw)
-        ypos = int((y - cy + h / 2.) * 3. / ch)   
-        # These dots are the loop type
-        typelist = [(1,0), (1,2), (3,2), (3,0)]
-        # These dots are the loop size
-        sizelist = [(0,0), (0,2), (4,2), (4,0)]
-        if (xpos, ypos) in typelist:
-            return 2**typelist.index((xpos, ypos)), 0
-        if (xpos, ypos) in sizelist:
-            return 0, 2**sizelist.index((xpos, ypos))
-        return (0, 0)
-
-    def processArray(self, arr, attr):        
+    def processArray(self, arr, attr={}):       
+     
         # convert to grey
         gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
-        if self["step"] == 0: return gray
-        # morphological close
-        gray = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, self.element, iterations=self["iters"])
-        if self["step"] == 1: return gray        
-        # Canny edge detect        
-        canny_output = cv2.Canny(gray, self["canny_thresh"], 2*self["canny_thresh"], 5);
-        if self["step"] == 2: return canny_output
+        if self["step"] <= 0: return gray       
+        
+        # threshold
+        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, self["t_ksize"]*2+1, self["t_c"])
+        if self["step"] <= 1: return thresh     
+
+        # morphological operation
+        morph = self.morph.processArray(thresh)
+        if self["step"] <= 2: return morph
+                             
         # Find contours
-        contours, hierarchy = cv2.findContours(canny_output, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(morph, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # search for cross contours
-        self.cross_params = None
+        self.cross_params = (0, 0, 1000000, 1000000)
         for i, rawcnt in enumerate(contours):
             # approximate contour with a polygon at most curve_epsilon from the real contour
             cnt = cv2.approxPolyDP(rawcnt, self["curve_epsilon"], True)
-            cross = self.get_cross(cnt)
             if self["step"] == 3:
-                cv2.drawContours(arr, contours, i, (0, 255, 0), 1, cv2.CV_AA)            
+                cv2.drawContours(arr, [cnt], 0, (0, 255, 0), 1, cv2.CV_AA)            
+                
+            cross = self.get_cross(cnt)                
             if cross:
-                self.cross_params = cross
-                moment = cv2.moments(rawcnt)
-                self.angle = 0.5*np.arctan((2*moment['mu11'])/(moment['mu20']-moment['mu02']))                 
+                # if told to draw only crosses then do that
                 if self["step"] == 4:
-                    cv2.drawContours(arr, [cnt], 0, (0, 255, 0), 1, cv2.CV_AA)
-                    return arr  
-                break
+                    cv2.drawContours(arr, [rawcnt], 0, (0, 255, 0), 1, cv2.CV_AA)            
+                # store the smallest cross
+                x, y, w, h = self.cross_params
+                nx, ny, nw, nh = cross
+                if nw*nh < w * h:
+                    # found a smaller cross, use the bounds of the raw contour
+                    self.cross_params = self.get_bounds(rawcnt)
+                    # Calculate angle of cross
+                    moment = cv2.moments(rawcnt)
+                    self.angle = 0.5*np.arctan((2*moment['mu11'])/(moment['mu20']-moment['mu02']))                 
+        # if we drew on the array return it
+        if self["step"] <= 4:
+            return arr
         # if we didn't find anything then just return
-        if self.cross_params is None:
-            return                        
-        # now go back to the contours and look for dots
-        self.dots = []
-        for i, rawcnt in enumerate(contours):
-            cnt = cv2.approxPolyDP(rawcnt, self["curve_epsilon"], True)
-            dot = self.get_dot(cnt)
-            if dot:
-                self.dots.append(dot)
-                if self["step"] == 5:
-                    cv2.drawContours(arr, contours, i, (0, 255, 0), 1, cv2.CV_AA)
-        # got a list of dots, work out binary code
-        coords = set()
-        for dot in self.dots:
-            coords.add(self.classify_dot(*dot))
-        self["ltype"], lsize = sum(np.array(x) for x in coords)
+        if not self.cross_params[0]:
+            print "No crosses found in image"
+            return                                
+            
+        # now go back to morph image and do a canny edge detect on it
+        canny = cv2.Canny(morph, self["canny_thresh"], 2*self["canny_thresh"], 5);
+        if self["step"] <= 5: return canny
+        
+        # Count the number of white pixels in each dots location
+        # These dots are the loop type
+        self["ltype"] = self.get_dots(arr, canny, [(1,0), (1,2), (3,2), (3,0)])
+        # These dots are the loop size
+        lsize = self.get_dots(arr, canny, [(0,0), (0,2), (4,2), (4,0)])
+        # if we drew on the array return it
+        if self["step"] <= 6:
+            return arr
+        
+        # bounds check
+        if lsize >= 9:
+            return
         # lookup loop size based on type
         if self["ltype"] == 4:
             # microloops
@@ -152,11 +182,11 @@ class Template(AdPythonPlugin):
         lx = np.int32(cx + cw / 2. - np.cos(self.angle) * loop_off + 0.5)
         ly = np.int32(cy + ch / 2. - np.sin(self.angle) * loop_off + 0.5)
         lr = np.int32(self["lsize"] / 2. / self['micron_pix'] + 0.5)
-        if self["step"] == 6:
+        if self["step"] <= 7:
             cv2.circle(arr, (lx, ly), lr, (0, 255, 0), 2)
         return arr         
 
 if __name__=="__main__":
-    Template().runOffline(
-        canny_thresh=200, step=7, ar = (0, 2, 0.01), ar_err = (0, 0.3, 0.01), micron_pix=(5, 7, 0.01))
+    Mitegen().runOffline(
+        canny_thresh=200, m_operation=11, step=8, ar = (0, 2, 0.01), ar_err = (0, 0.3, 0.01), micron_pix=(3, 7, 0.01), s_thresh=(0,1,0.01))
 

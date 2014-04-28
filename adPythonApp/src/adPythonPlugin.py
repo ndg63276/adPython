@@ -84,6 +84,10 @@ class AdPythonPlugin(object):
             self.log.exception("Error calling paramChanged()")
             raise
     
+    # default paramChanged does nothing
+    def paramChanged(self):
+        pass
+    
     # called when a new array is generated
     def _processArray(self, arr, attr):
         try:
