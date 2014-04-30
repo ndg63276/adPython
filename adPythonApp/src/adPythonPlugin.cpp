@@ -75,9 +75,9 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
     createParam("ADPYTHON_TIME",       asynParamFloat64, &adPythonTime);    
     createParam("ADPYTHON_STATE",      asynParamInt32,   &adPythonState);        
 
-    // First we tell python where to find adPythonPlugin.py
+    // First we tell python where to find adPythonPlugin.py and other scripts
     char buffer[BIGBUFFER];
-    snprintf(buffer, sizeof(buffer), "PYTHONPATH=%s", DATADIR);
+    snprintf(buffer, sizeof(buffer), "PYTHONPATH=%s", DATADIRS);
     putenv(buffer);
     
     // Now we initialise python
@@ -164,14 +164,11 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     this->interpretReturn(pValue);
     Py_XDECREF(pValue);
 
-    // copy everything except the data, e.g. uniqueId and timeStamp, attributes
-    if (this->pArrays[0]) this->pNDArrayPool->copy(pArray, this->pArrays[0], 0);
-
     // update param list, this will callParamCallbacks at the end
     this->updateParamList(0);    
 
     // update the attribute list
-    this->updateAttrList();
+    this->updateAttrList(pArray);
 
     // release GIL and dict Mutex    
     this->threadState = PyEval_SaveThread();
@@ -457,22 +454,22 @@ asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {
         Bad("Can't lookup numpy format for dataType");
     
     // Create a dimension description from numpy array, note the inverse order
+    int ndims = PyArray_NDIM(pArrayOb);
     size_t ad_dims[ND_ARRAY_MAX_DIMS];
-    for (int i=0; i<PyArray_NDIM(pArrayOb); i++) {
-        ad_dims[i] = PyArray_DIMS(pArrayOb)[PyArray_NDIM(pArrayOb)-i-1];
+    for (int i=0; i<ndims; i++) {
+        ad_dims[i] = PyArray_DIMS(pArrayOb)[ndims-i-1];
     }
     
     /* Allocate the array */
-    this->pArrays[0] = pNDArrayPool->alloc(PyArray_NDIM(pArrayOb), ad_dims, 
-        ad_fmt, 0, NULL);
+    this->pArrays[0] = pNDArrayPool->alloc(ndims, ad_dims, ad_fmt, 0, NULL);
     if (this->pArrays[0] == NULL) Bad("Error allocating buffer");
 
     // TODO: could avoid this memcpy if we could pass an existing
     // buffer to NDArray *AND* have it call a user free function
     NDArrayInfo arrayInfo;    
     this->pArrays[0]->getInfo(&arrayInfo);
-    memcpy(this->pArrays[0]->pData, PyArray_DATA(pArrayOb), arrayInfo.totalBytes);              
-    return asynSuccess; 
+    memcpy(this->pArrays[0]->pData, PyArray_DATA(pArrayOb), arrayInfo.totalBytes);                  
+    return asynSuccess;     
 }           
 
 /** Called by writexxx(). Updates the python param dict with values from the
@@ -693,7 +690,7 @@ asynStatus adPythonPlugin::updateAttrDict(NDArray *pArray) {
   * 
   * Called with dictMutex taken, GIL taken, this->lock taken.
   */ 
-asynStatus adPythonPlugin::updateAttrList() {
+asynStatus adPythonPlugin::updateAttrList(NDArray *pArray) {
      // Return if we aren't all good
     if (this->pluginState != GOOD) return asynError;
 
@@ -702,6 +699,10 @@ asynStatus adPythonPlugin::updateAttrList() {
 
     // Return if we don't have an attribute dict to read from
     if (this->pAttrs == NULL) Bad("Attribute dict is null");
+
+    // copy uniqueId and timeStamp over
+    this->pArrays[0]->timeStamp = pArray->timeStamp;
+    this->pArrays[0]->uniqueId = pArray->uniqueId;    
 
     // Create attr key list
     PyObject *pKeys = PyDict_Keys(this->pAttrs);
@@ -728,7 +729,17 @@ asynStatus adPythonPlugin::updateAttrList() {
                 driverName, __func__, paramStr);            
         }
     }
-    Py_DECREF(pKeys);    
+    Py_DECREF(pKeys);  
+    
+    // If we have a 3 dim image then assume RGB1, otherwise Mono
+    int colorMode;
+    if (this->pArrays[0]->ndims > 2) {
+        colorMode = NDColorModeRGB1;
+    } else {
+        colorMode = NDColorModeMono;
+    }
+    this->pArrays[0]->pAttributeList->add("ColorMode", "Color Mode", NDAttrInt32, &colorMode);    
+      
     return asynSuccess;
 }
 

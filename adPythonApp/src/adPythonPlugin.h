@@ -48,7 +48,7 @@ private:
     asynStatus updateParamDict();
     asynStatus updateParamList(int atinit);
     asynStatus updateAttrDict(NDArray *pArray);
-    asynStatus updateAttrList();    
+    asynStatus updateAttrList(NDArray *pArray);    
     asynStatus lookupNpyFormat(NDDataType_t ad_fmt, int *npy_fmt);
     asynStatus lookupAdFormat(int npy_fmt, NDDataType_t *ad_fmt);
     
