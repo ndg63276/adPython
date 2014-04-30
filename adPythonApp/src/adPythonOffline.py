@@ -159,12 +159,17 @@ Display a gui that lets the user interactively change parameters on each image
     def update(self):
         # read the input array
         src = cv2.imread(self.files[self.findex], self.options.rgb)
+        # RGB please!
+        if self.options.rgb:
+            src = cv2.cvtColor(src, cv2.COLOR_BGR2RGB)
         # pass it to the process function
-        result = self.plugin.processArray(src, {})
+        result = self.plugin._processArray(src, {})
         # show the input image if nothing returned
         if result is None:
             result = src
         # display and return
+        if len(result.shape) == 3:
+            result = cv2.cvtColor(result, cv2.COLOR_RGB2BGR)        
         cv2.imshow(self.results_name, result)
         # update the trackbar positions
         self.updateSliders()        
