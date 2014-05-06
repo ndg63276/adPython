@@ -10,29 +10,27 @@ class Mitegen(AdPythonPlugin):
         # The default logging level is INFO.
         # Comment this line to set debug logging off
         #self.log.setLevel(logging.DEBUG) 
-        # Make some generic parameters
-        # You can change the Name fields on the EDM screen here
-        # Hide them by making their name -1
         params = dict(
                       micron_pix = 3.67, # 5.13 for LD_*                                  
                       # Morphology
                       m_operation = 3,
-                      m_ksize = 3,    
+                      m_ksize = 4,    
                       m_iters = 1,                      
                       # Threshold
-                      t_ksize = 11,
+                      t_ksize = 9,
                       t_c = 5,
                       # Contours for cross finding
                       curve_epsilon = 8,
                       ar_err = 0.15,
                       # Canny        
-                      canny_thresh = 75,
+                      canny_thresh = 110,
                       # Output
-                      step = 8,                      
+                      step = 7,                      
                       ltype = -1,
                       lsize = -1, 
                       lx = -1.,
-                      ly = -1.                  
+                      ly = -1.,
+                      ch = -1.                                                          
                       )
         # import a morphology plugin to do filtering
         self.morph = Morph()        
@@ -87,7 +85,7 @@ class Mitegen(AdPythonPlugin):
             # get sum of it
             sums[i] = canny[y:y+w, x:x+w].sum() / 255            
             pts[i] = (x, y, w, h)
-        thresh = 0.7 * max(sums.values())
+        thresh = 0.8 * max(sums.values())
         tot = 0            
         for i, s in sums.items():
             x, y, w, h = pts[i]
@@ -189,6 +187,7 @@ class Mitegen(AdPythonPlugin):
         # These are the results in microns
         self['lx'] = lx * self['micron_pix']
         self['ly'] = ly * self['micron_pix']
+        self['ch'] = ch * self['micron_pix']        
         if self["step"] <= 7:
             cv2.circle(self.dest, (lx, ly), lr, (0, 255, 0), 2)
             return self.dest
@@ -204,5 +203,6 @@ if __name__=="__main__":
         micron_pix=(3, 7, 0.01), 
         s_thresh=(0,1,0.01),
         lx = 1000,
-        ly = 1000,)
+        ly = 1000,
+        ch = 1000,)
 

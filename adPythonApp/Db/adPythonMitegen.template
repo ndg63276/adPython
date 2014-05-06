@@ -246,3 +246,11 @@ record(ai, "$(P)$(R)ly") {
     field(PREC, "3")
     field(EGU, "um")     
 }
+
+record(ai, "$(P)$(R)ch") {
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))ch")
+    field(SCAN, "I/O Intr")
+    field(PREC, "3")
+    field(EGU, "um")     
+}
