@@ -47,8 +47,8 @@ class Morph(AdPythonPlugin):
             elif operation == MORPH_MEDIAN_BLUR:
                 dest = cv2.medianBlur(arr, ksize)
             elif operation == MORPH_ADAPT_THRESH:
-                dest = cv2.adaptiveThreshold(arr, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, ksize, ksize)
+                dest = cv2.adaptiveThreshold(arr, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, ksize, 5)
         return dest
 
 if __name__=="__main__":
-    Morph().runOffline(operation=11, ksize=30, iters=30)
+    Morph().runOffline(operation=11, ksize=100, iters=30)
