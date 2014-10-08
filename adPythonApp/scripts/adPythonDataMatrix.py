@@ -79,10 +79,14 @@ class Template(AdPythonPlugin):
                     dx, dy = pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]
                     p3 = [pts[0][0] - dy, pts[0][1] + dx]
                     pts.append(p3)
-                    # work out the bounding rectangle
                     pts = numpy.array(pts, 'int32')
-
-                    center, size, angle = cv2.minAreaRect(pts)                
+                    # now work out the bounding rectangle of those points
+                    x, y, w, h = cv2.boundingRect(pts.reshape((-1, 1, 2)))
+                    # and take a roi of it
+                    pad = self["int1"] / 10
+                    threshroi = thresh[y-pad:y+h+pad, x-pad:x+w+pad]
+                    # work out the rotated bounding rectangle
+                    center, size, angle = cv2.minAreaRect(pts-(x-pad, y-pad))                
                     if angle0 > angle2:
                         if pts[1][1]-pts[0][1] < 0:
                             angle += 180
@@ -90,27 +94,24 @@ class Template(AdPythonPlugin):
                         if pts[1][1]-pts[0][1] < 0:
                             angle += 90
                         else:
-                            angle += 270                    
-                    # TODO: region of interest the image before we rotate it
+                            angle += 270  
                     # get the rotation matrix                            
                     M = cv2.getRotationMatrix2D(center, angle, 1.0);
                     # perform affine transform
-                    l = max(*thresh.shape)
-                    rot = cv2.warpAffine(thresh, M, (l, l));
-                    size = (int(size[0] + 30), int(size[1] + 10))
-                    roi = cv2.getRectSubPix(rot, size, center)
-                    sym = self.dm.decode(size[0], size[1],
-                                     buffer(roi.tostring()),
-                                     max_count = 1)
+                    l = max(*threshroi.shape)
+                    rot = cv2.warpAffine(threshroi, M, (l, l));
+                    # now decode it
+                    sym = self.dm.decode(l, l, buffer(rot.tostring()), max_count = 1)
                     print sym
                     if sym:
-                        cv2.putText(out, sym, (int(center[0]), int(center[1])), cv2.FONT_HERSHEY_PLAIN, 3, (255,0,0), 2)
+                        cv2.putText(out, sym, (int(center[0]+x+pad), int(center[1]+y+pad)), cv2.FONT_HERSHEY_PLAIN, 3, (255,0,0), 3)
                         squares.append(pts)                        
                     
         # Draw squares on the image    
         cv2.drawContours(out, squares, -1, (255,0,0), 3)
         
         # Mask out the area of these polys   
+        #cv2.imwrite("/scratch/U/datamatrix_results.jpg", cv2.cvtColor(out, cv2.COLOR_RGB2BGR) )
         return out
 
 if __name__=="__main__":
