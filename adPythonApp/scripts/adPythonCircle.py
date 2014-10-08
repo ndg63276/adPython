@@ -24,7 +24,11 @@ class Circle(AdPythonPlugin):
         # arr is a numpy array
         # attr is an attribute dictionary that will be attached to the array
         # convert to grey
-        gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+        if len(arr.shape) == 3:
+            gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+        else:
+            # already gray
+            gray = arr
         # run circle finding on it        
         circles = cv2.HoughCircles(gray, cv2.cv.CV_HOUGH_GRADIENT, self["dp"], 
             self["minDist"], minRadius = self["minRadius"], 
