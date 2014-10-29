@@ -25,7 +25,7 @@ class Morph(AdPythonPlugin):
         dest = arr
         # skip this image?
         if self["iters"] == 0: 
-            return
+            return arr
         # got a new image to process
         operation = self["operation"]
         ksize = self["ksize"]
