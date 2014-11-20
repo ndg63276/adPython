@@ -10,8 +10,8 @@ class Circle(AdPythonPlugin):
         # Make some generic parameters
         # You can change the Name fields on the EDM screen here
         # Hide them by making their name -1
-        params = dict(dp = 2.0, minDist = 50, minRadius = 50, maxRadius = 200,
-            drawCircles = 1, param1 = 315, x = 0.0, y = 0.0)
+        params = dict(dp = 1.0, minDist = 10, minRadius = 120, maxRadius = 150,
+            drawCircles = 1, param1 = 120, x = 0.0, y = 0.0)
         AdPythonPlugin.__init__(self, params)
         
     def paramChanged(self):
