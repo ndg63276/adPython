@@ -14,19 +14,11 @@ class Gaussian2DFitter(AdPythonPlugin):
         # The default logging level is INFO.
         # Comment this line to set debug logging off
         self.log.setLevel(logging.DEBUG) 
-        # Make some generic parameters
-        # You can change the Name fields on the EDM screen here
-        # Hide them by making their name -1
-      #  params = dict(int1 = 1,      int1Name = "Peak height",
-      #                int2 = 2,      int2Name = "Origin x",
-      #                int3 = 3,      int3Name = "Origin y",
-      #                double1 = 1.0, double1Name = "Sigma x",
-      #                double2 = 2.0, double2Name = "Sigma y",
-      #                double3 = 3.0, double3Name = "Angle")
+        # Make inputs and ouptuts list
         params = dict(PeakHeight = 1, 
                       OriginX = 2, 
                       OriginY = 3,  
-                      Baseline = 3, 
+                      Baseline = 3., 
                       SigmaX = 1.0,
                       SigmaY = 2.0,
                       Angle = 3.0,
@@ -35,6 +27,10 @@ class Gaussian2DFitter(AdPythonPlugin):
                       FitThinning = 5,
                       Maxiter = 20,
                       FitStatus = "",
+                      OverlayROI = 1,
+                      OverlayElipse = 1,
+                      OverlayCross = 1,
+                      OutputType = 1,
                       )
         AdPythonPlugin.__init__(self, params)
         
@@ -66,6 +62,21 @@ class Gaussian2DFitter(AdPythonPlugin):
             self["FitStatus"] = "Fit error"
         else:
             self["FitStatus"] = "Fit OK"
+            # Write out to the EDM output parameters.
+            self["Baseline"] = float(fit[0])
+            self["PeakHeight"] = int(fit[1])
+            self["OriginX"] = int(fit[2])
+            self["OriginY"] = int(fit[3])
+            self["SigmaX"] = s_x
+            self["SigmaY"] = s_y
+            self["Angle"] = th
+            self["Error"] = float(error)
+            
+            if self["OutputType"] == 1:
+                # create the model output and take a difference to the original data.
+                grid = fit_lib.flatten_grid(fit_lib.create_grid(arr.shape))
+                arr = arr2 - fit_lib.Gaussian2d(fit, grid).reshape(arr.shape)
+                arr = numpy.uint8(arr)
          
         # Add the annotations
             def plot_ab_axis(image, orig_x, orig_y, theta, ax_size = 70, col = 256):
@@ -129,25 +140,18 @@ class Gaussian2DFitter(AdPythonPlugin):
                 out = numpy.where(overlay == 0, image, overlay)
                 return out
     
-    
-            ol_cross = plot_ab_axis(arr, fit[2], fit[3], th, ax_size = 20, col=255)
-            ol_elipse = plot_elipse(arr, fit[2], fit[3], s_x, s_y, th, 255)
-            ol_ROI = plot_ROI(arr, results)
-            arr = apply_overlay(arr, ol_cross)
-            arr = apply_overlay(arr, ol_elipse)
-            arr = apply_overlay(arr, ol_ROI)
-            # create the model output and take a difference to the original data.
-            grid = fit_lib.flatten_grid(fit_lib.create_grid(arr.shape))
-            arr3 = arr - fit_lib.Gaussian2d(fit, grid).reshape(arr.shape)
-            # Write out to the EDM output parameters.
-            self["Baseline"] = fit[0]
-            self["PeakHeight"] = int(fit[1])
-            self["OriginX"] = int(fit[2])
-            self["OriginY"] = int(fit[3])
-            self["SigmaX"] = s_x
-            self["SigmaY"] = s_y
-            self["Angle"] = th
-            self["Error"] = error
+            if self["OverlayCross"] == 1:
+                ol_cross = plot_ab_axis(arr, fit[2], fit[3], th, ax_size = 20, col=255)
+                arr = apply_overlay(arr, ol_cross)
+            
+            if self["OverlayElipse"] == 1:            
+                ol_elipse = plot_elipse(arr, fit[2], fit[3], s_x, s_y, th, 255)
+                arr = apply_overlay(arr, ol_elipse)
+           
+            if self["OverlayROI"] == 1: 
+                ol_ROI = plot_ROI(arr, results)           
+                arr = apply_overlay(arr, ol_ROI)
+                
              
             # Write the attibute array which will be attached to the output array.
             #Note that we convert from the numpy
@@ -157,7 +161,7 @@ class Gaussian2DFitter(AdPythonPlugin):
             for param in self:
                 attr[param] = self[param]
             # Write something to the logs
-            self.log.debug("Array processed, baseline: %d, peak height: %d, origin x: %d, origin y: %d, sigma x: %f, sigma y: %f, angle: %f, error: %f", fit[0], fit[1], fit[2], fit[3],s_x,s_y,th, error)        
+            self.log.debug("Array processed, baseline: %f, peak height: %d, origin x: %d, origin y: %d, sigma x: %f, sigma y: %f, angle: %f, error: %f", self["Baseline"], self["PeakHeight"], self["OriginX"], self["OriginY"], self["SigmaX"],self["SigmaY"],self["Angle"], self["Error"])    
         # return the resultant array.
         return arr
 

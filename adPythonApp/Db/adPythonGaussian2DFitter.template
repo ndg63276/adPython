@@ -5,6 +5,49 @@
 # % macro, ADDR, Asyn Port address
 # % gui, $(PORT), edmtab, adPythonGaussian2DFitter.edl, P=$(P),R=$(R)
 
+
+record(longin, "$(P)$(R)OutputType_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))OutputType")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)OutputType") {
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))OutputType")
+
+record(longin, "$(P)$(R)OverlayROI_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))OverlayROI")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)OverlayROI") {
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))OverlayROI")
+
+
+record(longin, "$(P)$(R)OverlayElipse_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))OverlayElipse")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)OverlayElipse") {
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))OverlayElipse")
+ 
+    
+    record(longin, "$(P)$(R)OverlayCross_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))OverlayCross")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)OverlayCross") {
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))OverlayCross")
+
 record(longin, "$(P)$(R)FitWindowSize_RBV") {
     field(DTYP, "asynInt32")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))FitWindowSize")
@@ -59,7 +102,7 @@ record(longin, "$(P)$(R)OriginY_RBV") {
 }
 
 record(longin, "$(P)$(R)Baseline_RBV") {
-    field(DTYP, "asynInt32")
+    field(DTYP, "asynFloat64")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))Baseline")
     field(SCAN, "I/O Intr")
 }
