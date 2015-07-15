@@ -161,7 +161,7 @@ class Gaussian2DFitter(AdPythonPlugin):
             for param in self:
                 attr[param] = self[param]
             # Write something to the logs
-            self.log.debug("Array processed, baseline: %f, peak height: %d, origin x: %d, origin y: %d, sigma x: %f, sigma y: %f, angle: %f, error: %f", self["Baseline"], self["PeakHeight"], self["OriginX"], self["OriginY"], self["SigmaX"],self["SigmaY"],self["Angle"], self["Error"])    
+            self.log.debug("Array processed, baseline: %f, peak height: %d, origin x: %d, origin y: %d, sigma x: %f, sigma y: %f, angle: %f, error: %f, output: %d", self["Baseline"], self["PeakHeight"], self["OriginX"], self["OriginY"], self["SigmaX"],self["SigmaY"],self["Angle"], self["Error"], self["OutputType"])    
         # return the resultant array.
         return arr
 
