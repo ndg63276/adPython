@@ -4,6 +4,7 @@ from optparse import OptionParser
 
 class AdPythonOffline(object):   
     def __init__(self, plugin, **ranges):
+        ranges.update(getattr(plugin, "ranges", {}))
         self.plugin = plugin
         # first see if we passed any images in the commandline
         parser = OptionParser("""usage: %prog [files...]
@@ -42,6 +43,7 @@ Display a gui that lets the user interactively change parameters on each image
         # Create a window to show the results in
         self.results_name = 'adPython Results: %s' % plugin.__class__.__name__
         cv2.namedWindow(self.results_name, cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback(self.results_name, self.onMouse)
                                 
         # now create the sliders on the gui
         self.ignoreSliders = False        
@@ -112,7 +114,11 @@ Display a gui that lets the user interactively change parameters on each image
             # Now create a slider for it
             cv2.createTrackbar(paramName, self.settings_name, index, 
                 len(self.paramvalues[param]) - 1, lambda v, param=param: self.sliderChanged(param, v))
-        self.plugin.paramChanged()  
+        self.plugin._paramChanged()  
+
+    def onMouse(self, event, x, y, *args):
+        if event == 1:
+            print "Clicked", x, y
         
     def main(self):    
         firstRun = True
@@ -152,7 +158,7 @@ Display a gui that lets the user interactively change parameters on each image
         if self.ignoreSliders:
             return
         self.plugin[param] = type(self.plugin[param])(self.paramvalues[param][index])
-        self.plugin.paramChanged()
+        self.plugin._paramChanged()
         self.update()
         
     # update the image
