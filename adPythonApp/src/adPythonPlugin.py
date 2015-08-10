@@ -77,6 +77,7 @@ class AdPythonPlugin(object):
     # called when parameter list changes
     def _paramChanged(self):
         try:
+            self.log.debug("Param changed: %s", self._params)        
             return self.paramChanged()
         except:
             # Log the exception in the logger as the C caller will throw away 
