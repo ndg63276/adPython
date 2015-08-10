@@ -170,21 +170,23 @@ void adPythonPlugin::processCallbacks(NDArray *pArray) {
     // update the attribute list
     this->updateAttrList(pArray);
 
-    // release GIL and dict Mutex    
-    this->threadState = PyEval_SaveThread();
-    epicsMutexUnlock(this->dictMutex);
-    
     // timestamp
     epicsTimeGetCurrent(&end);
     setDoubleParam(adPythonTime, epicsTimeDiffInSeconds(&end, &start)*1000);
-    callParamCallbacks();    
+    callParamCallbacks();
+
+    // release GIL and dict Mutex 
+    this->unlock();   
+    this->threadState = PyEval_SaveThread();
+    epicsMutexUnlock(this->dictMutex);
     
     // Spit out the array
     if (this->pArrays[0]) {
-        this->unlock();
         doCallbacksGenericPointer(this->pArrays[0], NDArrayData, 0);
-        this->lock();    
     }
+    
+    // called with the lock taken, so lock back up here
+    this->lock();        
 }
 
 /** Called when asyn clients call pasynInt32->write().
