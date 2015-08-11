@@ -43,7 +43,9 @@ class adPythonPlugin(_NDPluginBase):
 
     # __init__ arguments
     ArgInfo = _NDPluginBase.ArgInfo + makeArgInfo(__init__,
-        classname = Choice('Predefined python class to use', ["Morph", "Focus", "Template", "BarCode", "Transfer", "Mitegen", "Circle", "DataMatrix", "Gaussian2DFitter"]),
+        classname = Choice('Predefined python class to use', [
+            "Morph", "Focus", "Template", "BarCode", "Transfer", "Mitegen",
+            "Circle", "DataMatrix", "Gaussian2DFitter", "PowerMean"]),
         BUFFERS = Simple('Maximum number of NDArray buffers to be created for '
             'plugin callbacks', int),
         MEMORY = Simple('Max memory to allocate, should be maxw*maxh*nbuffer '
