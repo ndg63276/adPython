@@ -317,7 +317,10 @@ asynStatus adPythonPlugin::importAdPythonModule() {
     
     // Import the adPython module
     PyObject *pAdPython = PyImport_ImportModule("adPythonPlugin");
-    if (pAdPython == NULL) Ugly("Can't import adPythonPlugin");
+    if (pAdPython == NULL) {
+        PyErr_Print();
+        Ugly("Can't import adPythonPlugin");
+    }
     
     // Try and init numpy, needs to be done here as adPythonPlugin might have
     // to put it on our path
