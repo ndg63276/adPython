@@ -3,7 +3,7 @@
 # % macro, PORT, Asyn Port name
 # % macro, TIMEOUT, Timeout
 # % macro, ADDR, Asyn Port address
-# % gui, $(PORT), edmtab, adPythonTemplate.edl, P=$(P),R=$(R)
+# % gui, $(PORT), edmtab, adPythonPowerMean.edl, P=$(P),R=$(R)
 
 record(longin, "$(P)$(R)COUNT_RBV") {
     field(DTYP, "asynInt32")
@@ -14,10 +14,4 @@ record(longin, "$(P)$(R)COUNT_RBV") {
 record(longout, "$(P)$(R)COUNT") {
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))count")
-}
-
-record(stringin, "$(P)$(R)COUNTName_RBV") {
-    field(DTYP, "asynOctetRead")
-    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))countName")
-    field(SCAN, "I/O Intr")
 }

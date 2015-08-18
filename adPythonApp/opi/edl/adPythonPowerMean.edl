@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 326
-y 286
+x 327
+y 287
 w 390
 h 820
 font "arial-bold-r-12.0"
@@ -124,35 +124,26 @@ displayFileName {
 noScroll
 endObjectProperties
 
-# (Group)
-object activeGroupClass
+# (Shell Command)
+object shellCmdClass
 beginObjectProperties
 major 4
-minor 0
+minor 3
 release 0
-x 10
-y 535
-w 370
+x 5
+y 795
+w 380
 h 20
-
-beginGroup
-
-# (Textupdate)
-object TextupdateClass
-beginObjectProperties
-major 10
-minor 0
-release 0
-x 10
-y 535
-w 240
-h 20
-controlPv "$(P)$(R)COUNT_RBV"
 fgColor index 14
-fgAlarm
 bgColor index 3
-fill
+topShadowColor index 1
+botShadowColor index 11
 font "arial-bold-r-12.0"
+buttonLabel "HTML Doc"
+numCmds 1
+command {
+  0 "firefox file://$(which adPythonPlugin.edl | sed \"s|data/adPythonPlugin.edl|documentation/doxygen/adPythonTemplate_8template.html|\") &"
+}
 endObjectProperties
 
 # (Textentry)
@@ -192,31 +183,23 @@ font "arial-bold-r-12.0"
 fontAlign "center"
 endObjectProperties
 
-endGroup
-
-visPv "$(P)$(R)COUNTName_RBV"
-visMin "0"
-visMax "1"
-endObjectProperties
-
-# (Shell Command)
-object shellCmdClass
+# (Static Text)
+object activeXTextClass
 beginObjectProperties
 major 4
-minor 3
-release 0
-x 5
-y 795
-w 380
-h 20
+minor 1
+release 1
+x 10
+y 535
+w 173
+h 13
+font "arial-bold-r-12.0"
 fgColor index 14
 bgColor index 3
-topShadowColor index 1
-botShadowColor index 11
-font "arial-bold-r-12.0"
-buttonLabel "HTML Doc"
-numCmds 1
-command {
-  0 "firefox file://$(which adPythonPlugin.edl | sed \"s|data/adPythonPlugin.edl|documentation/doxygen/adPythonTemplate_8template.html|\") &"
+useDisplayBg
+value {
+  "Number of samples for mean:"
 }
+autoSize
 endObjectProperties
+
