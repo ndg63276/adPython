@@ -1,6 +1,7 @@
 #!/usr/bin/env dls-python
 from adPythonPlugin import AdPythonPlugin
 
+import numpy as np
 import cv2
 
 
@@ -155,6 +156,12 @@ def locate_sample(edge_arr, params):
                 top[x:] = [None for _ in xrange(x)]
                 bottom[x:] = [None for _ in xrange(x)]
 
+    # Prepare for export to PVs.
+    none_value = 0
+    top = np.asarray(
+        [none_value if t is None else t for t in top], dtype=np.int32)
+    bottom = np.asarray(
+        [none_value if b is None else b for b in bottom], dtype=np.int32)
     if tip_y is None or tip_x is None:
         tip_y, tip_x = -1, -1
 
@@ -178,6 +185,8 @@ class MxSampleDetect(AdPythonPlugin):
             min_tip_height=5,
             tip_x=-1,  # Pixel positions of detected tip.
             tip_y=-1,  # (Not really parameters...)
+            top=np.asarray([0], dtype=np.int32),  # Edge waveforms.
+            bottom=np.asarray([0], dtype=np.int32),  # (Not parameters either.)
             out_arr=0,  # Which array to put downstream.
         )
 
@@ -212,7 +221,7 @@ class MxSampleDetect(AdPythonPlugin):
 
         # Write our results to PVs.
         self['tip_y'], self['tip_x'] = tip
-        # TODO: Write top, bottom edge arrays to PVs.
+        self['top'], self['bottom'] = edges
 
         # Return whichever array the user wants passed down to others in the
         # image processing chain.

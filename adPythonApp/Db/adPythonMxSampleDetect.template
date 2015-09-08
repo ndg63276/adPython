@@ -245,6 +245,26 @@ record(longin, "$(P)$(R)TipY") {
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))tip_y")
 }
 
+
+record(waveform, "$(P)$(R)Top")
+{
+   field(SCAN, "I/O Intr")
+   field(DTYP, "asynInt32ArrayIn")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))top")
+   field(FTVL, "LONG")
+   field(NELM, "1024")
+}
+
+record(waveform, "$(P)$(R)Bottom")
+{
+   field(SCAN, "I/O Intr")
+   field(DTYP, "asynInt32ArrayIn")
+   field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))bottom")
+   field(FTVL, "LONG")
+   field(NELM, "1024")
+}
+
+
 record(mbbo, "$(P)$(R)OutputArray") {
     field(PINI, "YES")
     field(DTYP, "asynInt32")
