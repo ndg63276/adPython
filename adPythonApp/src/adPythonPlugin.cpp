@@ -478,7 +478,7 @@ asynStatus adPythonPlugin::interpretReturn(PyObject *pValue) {
 }           
 
 /** Called by writexxx(). Updates the python param dict with values from the
-  * param list.
+  * param list, except for Numpy arrays, which are silently not updated.
   * 
   * Called with dictMutex taken, GIL taken, this->lock taken.
   */ 
@@ -522,9 +522,13 @@ asynStatus adPythonPlugin::updateParamDict() {
             char value[BIGBUFFER];
             getStringParam(param, BIGBUFFER, value);
             PyDict_SetItem(this->pParams, key, PyString_FromString(value));
+        } else if (PyArray_Check(pValue)) {
+            ; // Do nothing, because we expect no one has written to a waveform record.
+              // (If someone tried to do so, they would fail loudly, since
+              //  asynPortDriver::writeInt32Array() is not implemented.)
         } else {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: param %s is not an int, float or string\n",
+                "%s:%s: param %s is not an int, float, string or Numpy array\n",
                 driverName, __func__, paramStr);            
         }
     }
@@ -592,9 +596,48 @@ asynStatus adPythonPlugin::updateParamList(int atinit) {
             }
             // set string param
             setStringParam(param, PyString_AsString(value));
+        } else if (PyArray_Check(value)) {
+
+            PyArrayObject *array = reinterpret_cast<PyArrayObject*>(value);
+
+            if (PyArray_NDIM(array) != 1) {
+                asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                    "%s:%s: Numpy array param %s is not 1-dimensional\n",
+                    driverName, __func__, paramStr);
+                continue;
+            }
+
+            size_t width = PyArray_SIZE(array);
+            int elementType = PyArray_TYPE(array);
+
+            if (elementType == NPY_INT32) {
+                if (atinit) {
+                    createParam(paramStr, asynParamInt32Array,
+                        &adPythonUserParams[this->nextParam]);
+                    param = adPythonUserParams[this->nextParam++];
+                }
+                // set int32 array param
+                epicsInt32 *arrayData = static_cast<epicsInt32*>(PyArray_DATA(array));
+                doCallbacksInt32Array(arrayData, width, param, 0);
+
+            } else if (elementType == NPY_FLOAT64) {
+                if (atinit) {
+                    createParam(paramStr, asynParamFloat64Array,
+                        &adPythonUserParams[this->nextParam]);
+                    param = adPythonUserParams[this->nextParam++];
+                }
+                // set float64 array param
+                epicsFloat64 *arrayData = static_cast<epicsFloat64*>(PyArray_DATA(array));
+                doCallbacksFloat64Array(arrayData, width, param, 0);
+
+            } else {
+                asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
+                    "%s:%s: Numpy array %s has elements neither of type int32 or float64\n",
+                    driverName, __func__, paramStr);
+            }
         } else {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
-                "%s:%s: param %s is not an int, float or string\n",
+                "%s:%s: param %s is not an int, float, string or Numpy array\n",
                 driverName, __func__, paramStr);            
         }
     }
