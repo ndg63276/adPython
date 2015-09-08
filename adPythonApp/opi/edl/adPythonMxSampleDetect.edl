@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 472
-y 153
+x 715
+y 162
 w 390
 h 820
 font "arial-bold-r-12.0"
@@ -47,8 +47,8 @@ minor 0
 release 0
 x 230
 y 530
-w 150
-h 120
+w 155
+h 160
 lineColor index 14
 fill
 fillColor index 3
@@ -690,13 +690,129 @@ value {
 }
 endObjectProperties
 
+# (Menu Button)
+object activeMenuButtonClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 250
+y 665
+w 115
+h 20
+fgColor index 25
+bgColor index 3
+inconsistentColor index 0
+topShadowColor index 1
+botShadowColor index 11
+controlPv "$(P)$(R)OutputArray"
+indicatorPv "$(P)$(R)OutputArray_RBV"
+font "arial-bold-r-12.0"
+endObjectProperties
+
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
 major 4
 minor 1
 release 1
-x 235
+x 262
+y 635
+w 90
+h 35
+font "arial-bold-r-12.0"
+fontAlign "center"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Image to send"
+  "downstream:"
+}
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 267
+y 620
+w 80
+h 13
+font "arial-medium-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "(upside-down)"
+}
+autoSize
+endObjectProperties
+
+# (Related Display)
+object relatedDisplayClass
+beginObjectProperties
+major 4
+minor 4
+release 0
+x 257
+y 595
+w 100
+h 25
+fgColor index 43
+bgColor index 3
+topShadowColor index 1
+botShadowColor index 11
+font "arial-bold-r-12.0"
+buttonLabel "Edge arrays..."
+numPvs 4
+numDsps 1
+displayFileName {
+  0 "adPythonMxSampleDetectPlot"
+}
+endObjectProperties
+
+# (Group)
+object activeGroupClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 257
+y 540
+w 100
+h 45
+
+beginGroup
+
+# (Textupdate)
+object TextupdateClass
+beginObjectProperties
+major 10
+minor 0
+release 0
+x 292
+y 565
+w 65
+h 20
+controlPv "$(P)$(R)TipY"
+fgColor index 16
+fgAlarm
+bgColor index 10
+fill
+font "arial-bold-r-12.0"
+fontAlign "center"
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 257
 y 570
 w 29
 h 13
@@ -716,26 +832,7 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 270
-y 565
-w 65
-h 20
-controlPv "$(P)$(R)TipY"
-fgColor index 16
-fgAlarm
-bgColor index 10
-fill
-font "arial-bold-r-12.0"
-fontAlign "center"
-endObjectProperties
-
-# (Textupdate)
-object TextupdateClass
-beginObjectProperties
-major 10
-minor 0
-release 0
-x 270
+x 292
 y 540
 w 65
 h 20
@@ -754,7 +851,7 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 235
+x 257
 y 545
 w 29
 h 13
@@ -768,43 +865,7 @@ value {
 autoSize
 endObjectProperties
 
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 235
-y 590
-w 140
-h 35
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Image to send"
-  "downstream:"
-}
-endObjectProperties
+endGroup
 
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 260
-y 625
-w 115
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)OutputArray"
-indicatorPv "$(P)$(R)OutputArray_RBV"
-font "arial-bold-r-12.0"
 endObjectProperties
 
