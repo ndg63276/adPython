@@ -238,7 +238,6 @@ record(longin, "$(P)$(R)TipX") {
     field(DTYP, "asynInt32")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))tip_x")
 }
-
 record(longin, "$(P)$(R)TipY") {
     field(SCAN, "I/O Intr")
     field(DTYP, "asynInt32")
@@ -254,7 +253,6 @@ record(waveform, "$(P)$(R)Top")
    field(FTVL, "LONG")
    field(NELM, "1024")
 }
-
 record(waveform, "$(P)$(R)Bottom")
 {
    field(SCAN, "I/O Intr")
@@ -263,7 +261,6 @@ record(waveform, "$(P)$(R)Bottom")
    field(FTVL, "LONG")
    field(NELM, "1024")
 }
-
 
 record(mbbo, "$(P)$(R)OutputArray") {
     field(PINI, "YES")
@@ -296,4 +293,49 @@ record(mbbi, "$(P)$(R)OutputArray_RBV") {
     field(THVL, "3")
     field(FRST, "Closed edges")
     field(FRVL, "4")
+}
+
+record(bo, "$(P)$(R)DrawTip") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))draw_circle")
+    field(ZNAM, "Disabled")
+    field(ONAM, "Enabled")
+}
+record(bi, "$(P)$(R)DrawTip_RBV") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))draw_circle")
+    field(ZNAM, "Disabled")
+    field(ONAM, "Enabled")
+}
+
+record(bo, "$(P)$(R)DrawEdges") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))draw_edges")
+    field(ZNAM, "Disabled")
+    field(ONAM, "Enabled")
+}
+record(bi, "$(P)$(R)DrawEdges_RBV") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))draw_edges")
+    field(ZNAM, "Disabled")
+    field(ONAM, "Enabled")
+}
+
+record(bo, "$(P)$(R)ForceColor") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))force_color")
+    field(ZNAM, "No")
+    field(ONAM, "Yes")
+}
+record(bi, "$(P)$(R)ForceColor_RBV") {
+    field(SCAN, "I/O Intr")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))force_color")
+    field(ZNAM, "No")
+    field(ONAM, "Yes")
 }

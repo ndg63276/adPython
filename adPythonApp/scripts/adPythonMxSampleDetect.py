@@ -1,6 +1,7 @@
 #!/usr/bin/env dls-python
 from adPythonPlugin import AdPythonPlugin
 
+from itertools import chain
 import numpy as np
 import cv2
 
@@ -101,6 +102,11 @@ pp_candidates = [
 ]
 
 
+# A substitute for "None" which can fit into an np.int32 array/waveform record.
+# EDM plot can't handle negative integers, so best to use 0 rather than -1.
+none_value = 0
+
+
 def locate_sample(edge_arr, params):
     # Straight port of Tom Cobb's algorithm from the original (adOpenCV) 
     # mxSampleDetect.
@@ -157,7 +163,6 @@ def locate_sample(edge_arr, params):
                 bottom[x:] = [None for _ in xrange(x)]
 
     # Prepare for export to PVs.
-    none_value = 0
     top = np.asarray(
         [none_value if t is None else t for t in top], dtype=np.int32)
     bottom = np.asarray(
@@ -166,6 +171,20 @@ def locate_sample(edge_arr, params):
         tip_y, tip_x = -1, -1
 
     return (tip_y, tip_x), (top, bottom)
+
+
+def draw_circle(arr, (y, x), color, radius=5):
+    cv2.circle(arr, (x, y), radius, color)
+
+
+def draw_edges(arr, edges, color):
+    try:
+        for x, y in chain(*map(enumerate, edges)):
+            if y != none_value: arr[y, x] = color
+    except ValueError:
+        # Probably trying to write onto the read-only array from upstream.
+        # TODO: Could do a deepcopy to avoid this exception?
+        pass
 
 
 class MxSampleDetect(AdPythonPlugin):
@@ -181,24 +200,26 @@ class MxSampleDetect(AdPythonPlugin):
             canny_lower=50,
             close_ksize=5,  # Kernel size for "close" operation.
             close_iterations=1,
-            scan_direction=1,  # +1:LtR, -1:RtL
+            scan_direction=+1,  # +1:LtR, -1:RtL
             min_tip_height=5,
             tip_x=-1,  # Pixel positions of detected tip.
             tip_y=-1,  # (Not really parameters...)
             top=np.asarray([0], dtype=np.int32),  # Edge waveforms.
             bottom=np.asarray([0], dtype=np.int32),  # (Not parameters either.)
             out_arr=0,  # Which array to put downstream.
+            draw_circle=0,  # Annotation options.
+            draw_edges=0,
+            force_color=0,  # Expand colour depth to show colour annotations?
         )
 
         AdPythonPlugin.__init__(self, params)
 
     def processArray(self, arr, attr={}):
         # Get a greyscale version of the input.
-        dimensions = len(arr.shape)
-        if dimensions == 3 or dimensions == 4:
+        if arr.ndim == 3:
             gray_arr = cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
         else:
-            assert dimensions == 2
+            assert arr.ndim == 2
             gray_arr = arr
 
         # Preprocess the array. (Use the greyscale one.)
@@ -223,9 +244,26 @@ class MxSampleDetect(AdPythonPlugin):
         self['tip_y'], self['tip_x'] = tip
         self['top'], self['bottom'] = edges
 
-        # Return whichever array the user wants passed down to others in the
+        # Select whichever array the user wants passed down to others in the
         # image processing chain.
-        return (arr, gray_arr, pp_arr, edge_arr, closed_arr)[self['out_arr']]
+        out = (arr, gray_arr, pp_arr, edge_arr, closed_arr)[self['out_arr']]
+
+        # Expand the output colour depth to enable colour annotations if
+        # requested to do so. Choose the colour for annotations.
+        if self['force_color']:
+            color = [255, 0, 0]
+            if out.ndim == 2:
+                out = cv2.cvtColor(out, cv2.COLOR_GRAY2BGR)
+        else:
+            color = [255, 0, 0] if out.ndim == 3 else 255
+
+        # Optionally annotate the output array before returning.
+        if self['draw_circle']:
+            draw_circle(out, tip, color)
+        if self['draw_edges']:
+            draw_edges(out, edges, color)
+
+        return out
 
 
 if __name__ == '__main__':
