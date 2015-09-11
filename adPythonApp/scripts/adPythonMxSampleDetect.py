@@ -178,13 +178,8 @@ def draw_circle(arr, (y, x), color, radius=5):
 
 
 def draw_edges(arr, edges, color):
-    try:
-        for x, y in chain(*map(enumerate, edges)):
-            if y != none_value: arr[y, x] = color
-    except ValueError:
-        # Probably trying to write onto the read-only array from upstream.
-        # TODO: Could do a deepcopy to avoid this exception?
-        pass
+    for x, y in chain(*map(enumerate, edges)):
+        if y != none_value: arr[y, x] = color
 
 
 class MxSampleDetect(AdPythonPlugin):
@@ -248,20 +243,24 @@ class MxSampleDetect(AdPythonPlugin):
         # image processing chain.
         out = (arr, gray_arr, pp_arr, edge_arr, closed_arr)[self['out_arr']]
 
+        # Find out which annotation(s) the user wants (if any).
+        do_circle, do_edges = self['draw_circle'], self['draw_edges']
+
         # Expand the output colour depth to enable colour annotations if
-        # requested to do so. Choose the colour for annotations.
-        if self['force_color']:
+        # required and requested to do so. Choose the colour for annotations.
+        if self['force_color'] and (do_circle or do_edges):
             color = [255, 0, 0]
             if out.ndim == 2:
-                out = cv2.cvtColor(out, cv2.COLOR_GRAY2BGR)
+                out = cv2.cvtColor(out, cv2.COLOR_GRAY2RGB)
         else:
             color = [255, 0, 0] if out.ndim == 3 else 255
 
-        # Optionally annotate the output array before returning.
-        if self['draw_circle']:
-            draw_circle(out, tip, color)
-        if self['draw_edges']:
-            draw_edges(out, edges, color)
+        # If we're annotating the original, we need to make a writable copy.
+        if out is arr and (do_circle or do_edges): out = arr.copy()
+
+        # Do the annotations.
+        if do_circle: draw_circle(out, tip, color)
+        if do_edges: draw_edges(out, edges, color)
 
         return out
 
