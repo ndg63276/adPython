@@ -1,87 +1,94 @@
 #!/usr/bin/env dls-python
 from adPythonPlugin import AdPythonPlugin
 
+from inspect import getargspec
 from itertools import chain
 import numpy as np
 import cv2
 
 
-# Use thin wrapper functions around cv2 operations because we want a unified
-# interface (fn(arr, params)) to more easily expose the functions to the user.
+# Unify the interface to morphological operations using a decorator such that
+# all operations are called as `fn(arr, (param1, param2, ...))`. This makes it
+# easier to expose functions with different numbers of arguments to the end
+# user in a generic way.
 
-def erode(arr, params):
-    ksize, iterations = params[:2]
+def unified_interface(function):
+    def wrapper(arr, params):
+        n_params = len(getargspec(function).args) - 1  # (arr is not a param.)
+        required_params = params[:n_params]  # Throw away unwanted params.
+        return function(arr, *required_params)
+    return wrapper
+
+
+@unified_interface
+def erode(arr, ksize, iterations):
     element = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
     return cv2.erode(arr, element, iterations=iterations)
 
 
-def dilate(arr, params):
-    ksize, iterations = params[:2]
+@unified_interface
+def dilate(arr, ksize, iterations):
     element = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
     return cv2.dilate(arr, element, iterations=iterations)
 
 
 # `_morph` suffix to avoid name collision.
-def open_morph(arr, params):
-    ksize, iterations = params[:2]
+@unified_interface
+def open_morph(arr, ksize, iterations):
     element = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
     return cv2.morphologyEx(
         arr, cv2.MORPH_OPEN, element, iterations=iterations)
 
 
-def close(arr, params):
-    ksize, iterations = params[:2]
+@unified_interface
+def close(arr, ksize, iterations):
     element = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
     return cv2.morphologyEx(
         arr, cv2.MORPH_CLOSE, element, iterations=iterations)
 
 
-def gradient(arr, params):
-    ksize, iterations = params[:2]
+@unified_interface
+def gradient(arr, ksize, iterations):
     element = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
     return cv2.morphologyEx(
         arr, cv2.MORPH_GRADIENT, element, iterations=iterations)
 
 
-def top_hat(arr, params):
-    ksize, iterations = params[:2]
+@unified_interface
+def top_hat(arr, ksize, iterations):
     element = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
     return cv2.morphologyEx(
         arr, cv2.MORPH_TOPHAT, element, iterations=iterations)
 
 
-def black_hat(arr, params):
-    ksize, iterations = params[:2]
+@unified_interface
+def black_hat(arr, ksize, iterations):
     element = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
     return cv2.morphologyEx(
         arr, cv2.MORPH_BLACKHAT, element, iterations=iterations)
 
 
-def blur(arr, params):
-    # The comma is necessary. (It unpacks the tuple.)
-    ksize, = params[:1]
+@unified_interface
+def blur(arr, ksize):
     return cv2.blur(arr, (ksize, ksize))
 
 
-def gaussian_blur(arr, params):
-    ksize, = params[:1]
+@unified_interface
+def gaussian_blur(arr, ksize):
     # Kernel size should be odd.
-    if not ksize % 2:
-        ksize += 1
+    if not ksize % 2: ksize += 1
     return cv2.GaussianBlur(arr, (ksize, ksize), 0)
 
 
-def median_blur(arr, params):
-    ksize, = params[:1]
-    if not ksize % 2:
-        ksize += 1
+@unified_interface
+def median_blur(arr, ksize):
+    if not ksize % 2: ksize += 1
     return cv2.medianBlur(arr, ksize)
     
 
-def canny_edge_detect(arr, params):
-    upper_threshold, lower_threshold = params[:2]
-
-    # Upper and lower threshold arguments commute.
+@unified_interface
+def canny_edge_detect(arr, upper_threshold, lower_threshold):
+    # (Upper and lower threshold arguments commute.)
     return cv2.Canny(arr, upper_threshold, lower_threshold)
 
 
