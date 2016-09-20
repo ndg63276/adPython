@@ -1,2 +1,2 @@
 # Place any example specific dependencies here
-ARAVISGIGE=$(SUPPORT)/aravisGigE/0-1-15dls8
+ARAVISGIGE=$(SUPPORT)/aravisGigE/2-1dls2

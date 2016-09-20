@@ -19,6 +19,8 @@ public:
 				   const char *NDArrayPort, int NDArrayAddr, int maxBuffers, size_t maxMemory,
 				   int priority, int stackSize);
 	~adPythonPlugin() {}
+	/** This called once immediately after class instantiation */
+	virtual void initThreads();
     /** This is called when the plugin gets a new array callback */
     virtual void processCallbacks(NDArray *pArray);
     /** This is when we get a new int value */

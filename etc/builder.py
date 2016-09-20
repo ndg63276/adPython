@@ -1,37 +1,50 @@
+import copy
+
 from iocbuilder import Device, AutoSubstitution
 from iocbuilder.arginfo import *
 
-from iocbuilder.modules.areaDetector import AreaDetector, _NDPluginBase
+from iocbuilder.modules.asyn import Asyn, AsynPort
+from iocbuilder.modules.ADCore import ADCore, NDPluginBaseTemplate, includesTemplates, makeTemplateInstance
 
 class AdPython(Device):
     '''Library dependencies for adPython'''
-    Dependencies = (AreaDetector,)
+    Dependencies = (ADCore,)
     # Device attributes
     LibFileList = ['adPython']
     DbdFileList = ['adPythonPlugin']
     AutoInstantiate = True
 
+@includesTemplates(NDPluginBaseTemplate)
 class _adPythonBase(AutoSubstitution):
     '''This plugin Works out the area and tip of a sample'''
     TemplateFile = "adPythonPlugin.template"
-
-class adPythonPlugin(_NDPluginBase):
+    
+class adPythonPlugin(AsynPort):
     """This plugin creates an adPython object"""
+    # This tells xmlbuilder to use PORT instead of name as the row ID
+    UniqueName = "PORT"
+
     _SpecificTemplate = _adPythonBase
     Dependencies = (AdPython,)
 
-    def __init__(self, classname, BUFFERS = 50, MEMORY = 0, **args):
-        # Init the superclass (_NDPluginBase)
-        self.__super.__init__(**args)
+    def __init__(self, classname, PORT, NDARRAY_PORT, QUEUE = 5, BLOCK = 0, NDARRAY_ADDR = 0, BUFFERS = 50, MEMORY = 0, **args):
+        # Init the superclass (AsynPort)
+        self.__super.__init__(PORT)
+        # Update the attributes of self from the commandline args
+        self.__dict__.update(locals())
+        # Make an instance of our template
+        makeTemplateInstance(self._SpecificTemplate, locals(), args)
         # Init the python classname specific class
         class _tmp(AutoSubstitution):
             ModuleName = adPythonPlugin.ModuleName
             TrueName = "_adPython%s" % classname
             TemplateFile = "adPython%s.template" % classname
-        _tmp(**filter_dict(args, _tmp.ArgInfo.Names()))
+        _tmpargs = copy.deepcopy(args)
+        _tmpargs['PORT'] = PORT
+        _tmp(**filter_dict(_tmpargs, _tmp.ArgInfo.Names()))
         # Store the args
         self.filename = "$(ADPYTHON)/adPythonApp/scripts/adPython%s.py" % classname
-        self.__dict__.update(locals())
+        self.Configure = 'adPythonPluginConfigure'
 
     def Initialise(self):
         print '# %(Configure)s(portName, filename, classname, queueSize, '\
@@ -42,11 +55,16 @@ class adPythonPlugin(_NDPluginBase):
             '%(MEMORY)d)' % self.__dict__
 
     # __init__ arguments
-    ArgInfo = _NDPluginBase.ArgInfo + makeArgInfo(__init__,
+    ArgInfo = _SpecificTemplate.ArgInfo + makeArgInfo(__init__,
         classname = Choice('Predefined python class to use', [
             "Morph", "Focus", "Template", "BarCode", "Transfer", "Mitegen",
             "Circle", "DataMatrix", "Gaussian2DFitter", "PowerMean",
             "MxSampleDetect"]),
+        PORT = Simple('Port name for the plugin', str),
+        QUEUE = Simple('Input array queue size', int),
+        BLOCK = Simple('Blocking callbacks?', int),
+        NDARRAY_PORT = Ident('Input array port', AsynPort),
+        NDARRAY_ADDR = Simple('Input array port address', int),
         BUFFERS = Simple('Maximum number of NDArray buffers to be created for '
             'plugin callbacks', int),
         MEMORY = Simple('Max memory to allocate, should be maxw*maxh*nbuffer '

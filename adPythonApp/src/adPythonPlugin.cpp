@@ -74,7 +74,13 @@ adPythonPlugin::adPythonPlugin(const char *portNameArg, const char *filename,
     createParam("ADPYTHON_LOAD",       asynParamInt32,   &adPythonLoad);
     createParam("ADPYTHON_TIME",       asynParamFloat64, &adPythonTime);    
     createParam("ADPYTHON_STATE",      asynParamInt32,   &adPythonState);        
+}
 
+/** Init function called once immediately after class instantiation. Starts the
+ *  plugin threads.
+ */
+void adPythonPlugin::initThreads()
+{
     // First we tell python where to find adPythonPlugin.py and other scripts
     char buffer[BIGBUFFER];
     snprintf(buffer, sizeof(buffer), "PYTHONPATH=%s", DATADIRS);
@@ -722,9 +728,9 @@ asynStatus adPythonPlugin::updateAttrDict(NDArray *pArray) {
         if (pObject == NULL) {
             asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
                 "%s:%s: attribute %s could not be put in attribute dict\n",
-                driverName, __func__, pAttr->pName);            
+                driverName, __func__, pAttr->getName());
         } else {            
-            PyDict_SetItemString(this->pAttrs, pAttr->pName, pObject); 
+            PyDict_SetItemString(this->pAttrs, pAttr->getName(), pObject);
             Py_DECREF(pObject); 
         }
         pAttr = this->pFileAttributes->next(pAttr);
@@ -836,10 +842,12 @@ static int adPythonPluginConfigure(const char *portNameArg, const char *filename
                    int priority, int stackSize) {
     // Stack Size must be a minimum of 2MB
     if (stackSize < 2097152) stackSize = 2097152;
-    new adPythonPlugin(portNameArg, filename,
+    adPythonPlugin* adp;
+    adp = new adPythonPlugin(portNameArg, filename,
                    classname, queueSize, blockingCallbacks,
                    NDArrayPort, NDArrayAddr, maxBuffers, maxMemory,
                    priority, stackSize);
+    adp->initThreads();
     return(asynSuccess);
 }
 

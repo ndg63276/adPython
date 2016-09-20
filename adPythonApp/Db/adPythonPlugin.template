@@ -3,6 +3,8 @@
 # % macro, PORT, Asyn Port name
 # % macro, TIMEOUT, Timeout
 
+include "NDPluginBase.template"
+
 record(ai, "$(P)$(R)Time_RBV")
 {
     field(DTYP, "asynFloat64")
