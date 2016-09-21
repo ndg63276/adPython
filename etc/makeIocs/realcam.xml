@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <components arch="linux-x86_64">
-	<aravisGigE.aravisCamera ADDR="0" CLASS="AVT_Manta_1_44_4" ID="Allied Vision Technologies-50-0503322702" P="ADPYTHONGIGE" PORT="CAM.GIGE" R=":PY1:" TIMEOUT="1"/>
+	<aravisGigE.aravisCamera ADDR="0" CLASS="AVT_Mako_1_52" ID="Allied Vision Technologies-50-0536875290" P="ADPYTHONGIGE" PORT="CAM.GIGE" R=":GIGE:" TIMEOUT="1"/>
 	<adPython.adPythonPlugin ADDR="0" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.GIGE" P="ADPYTHONGIGE" PORT="CAM.PY1" R=":PY1:" TIMEOUT="1" classname="Morph"/>
 	<adPython.adPythonPlugin ADDR="0" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.GIGE" P="ADPYTHONGIGE" PORT="CAM.PY2" R=":PY2:" TIMEOUT="1" classname="Template"/>
 	<adPython.adPythonPlugin ADDR="0" NDARRAY_ADDR="0" NDARRAY_PORT="CAM.GIGE" P="ADPYTHONGIGE" PORT="CAM.F" R=":FOCUS:" TIMEOUT="1" classname="Focus"/>
