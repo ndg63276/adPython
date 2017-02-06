@@ -1,0 +1,119 @@
+# % macro, P, Device Prefix
+# % macro, R, Device Suffix
+# % macro, PORT, Asyn Port name
+# % macro, TIMEOUT, Timeout
+# % macro, ADDR, Asyn Port address
+# % gui, $(PORT), edmtab, adPythonRotate.edl, P=$(P),R=$(R)
+
+record(mbbi, "$(P)$(R)Clipping_RBV")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))clip")
+    field(SCAN, "I/O Intr")
+    field(ZRST, "As Src")
+    field(ZRVL, "0")
+    field(ONST, "Square")
+    field(ONVL, "1")
+    field(TWST, "None")
+    field(TWVL, "2")
+}
+
+record(mbbo, "$(P)$(R)Clipping")
+{
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))clip")
+    field(ZRST, "As Src")
+    field(ZRVL, "0")
+    field(ONST, "Square")
+    field(ONVL, "1")
+    field(TWST, "None")
+    field(TWVL, "2")
+}
+
+record(ai, "$(P)$(R)Angle_RBV") {
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))rotAngle")
+    field(SCAN, "I/O Intr")
+    field(PREC, "3")
+    field(EGU,  "deg")     
+}
+
+record(ao, "$(P)$(R)Angle") {
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))rotAngle")
+    field(PREC, "3")
+    field(EGU, "deg")    
+    field(PINI, "YES")
+}
+
+record(longin, "$(P)$(R)CentreX_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))rotCentreX")
+    field(SCAN, "I/O Intr")
+    field(EGU,  "pixels")     
+}
+
+record(longout, "$(P)$(R)CentreX") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))rotCentreX")
+    field(EGU,  "pixels")     
+}
+
+record(longin, "$(P)$(R)CentreY_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))rotCentreY")
+    field(SCAN, "I/O Intr")
+    field(EGU,  "pixels")     
+}
+
+record(longout, "$(P)$(R)CentreY") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))rotCentreY")
+    field(EGU,  "pixels")     
+}
+
+record(longin, "$(P)$(R)Blue_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))fillBlue")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)Blue") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))fillBlue")
+    field(DRVL, "0")
+    field(DRVH, "255")
+}
+
+record(longin, "$(P)$(R)Green_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))fillGreen")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)Green") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))fillGreen")
+    field(DRVL, "0")
+    field(DRVH, "255")
+}
+
+record(longin, "$(P)$(R)Red_RBV") {
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))fillRed")
+    field(SCAN, "I/O Intr")
+}
+
+record(longout, "$(P)$(R)Red") {
+    field(PINI, "YES")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))fillRed")
+    field(DRVL, "0")
+    field(DRVH, "255")
+}
+
+
