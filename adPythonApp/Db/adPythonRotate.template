@@ -3,6 +3,10 @@
 # % macro, PORT, Asyn Port name
 # % macro, TIMEOUT, Timeout
 # % macro, ADDR, Asyn Port address
+# % macro, ANGLEPV, Optional link to PV specifying angle
+# % macro, ANGLESCALE, Optional ANGLEPV scaling
+# % macro, ANGLEOFFSET, Optional ANGLEPV offset
+ 
 # % gui, $(PORT), edmtab, adPythonRotate.edl, P=$(P),R=$(R)
 
 record(mbbi, "$(P)$(R)Clipping_RBV")
@@ -28,6 +32,7 @@ record(mbbo, "$(P)$(R)Clipping")
     field(ONVL, "1")
     field(TWST, "None")
     field(TWVL, "2")
+    info(autosaveFields, "VAL")
 }
 
 record(ai, "$(P)$(R)Angle_RBV") {
@@ -39,11 +44,48 @@ record(ai, "$(P)$(R)Angle_RBV") {
 }
 
 record(ao, "$(P)$(R)Angle") {
+    field(DESC, "Image rotation angle")
     field(DTYP, "asynFloat64")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))rotAngle")
     field(PREC, "3")
     field(EGU, "deg")    
     field(PINI, "YES")
+    info(autosaveFields, "VAL")
+}
+
+record(calcout, "$(P)$(R)AngleLinkCalc")
+{
+    field(DESC, "Apply scaling to anglelink")
+    field(CALC, "A*B+C")
+    field(INPB, "$(P)$(R)AngleLinkScale.VAL")
+    field(INPC, "$(P)$(R)AngleLinkOffset.VAL")
+    field(OOPT, "Every Time")
+    field(DOPT, "Use CALC")
+    field(OUT, "$(P)$(R)Angle PP")
+}
+
+record(ao, "$(P)$(R)AngleLink")
+{
+    field(DOL,  "$(ANGLEPV=) CP MS")
+    field(OMSL, "closed_loop")
+    field(OUT, "$(P)$(R)AngleLinkCalc.A PP MS")
+    info(autosaveFields, "DOL")
+}
+
+record(ao, "$(P)$(R)AngleLinkScale")
+{
+    field(DOL,  "$(ANGLESCALE=1"))
+    field(OMSL, "supervisory")
+    field(PREC, "3")
+    info(autosaveFields, "VAL")
+}
+
+record(ao, "$(P)$(R)AngleLinkOffset")
+{
+    field(DOL,  "$(ANGLEOFFSET=0"))
+    field(OMSL, "supervisory")
+    field(PREC, "3")
+    info(autosaveFields, "VAL")
 }
 
 record(longin, "$(P)$(R)CentreX_RBV") {
@@ -58,6 +100,7 @@ record(longout, "$(P)$(R)CentreX") {
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))rotCentreX")
     field(EGU,  "pixels")     
+    info(autosaveFields, "VAL")
 }
 
 record(longin, "$(P)$(R)CentreY_RBV") {
@@ -72,6 +115,7 @@ record(longout, "$(P)$(R)CentreY") {
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))rotCentreY")
     field(EGU,  "pixels")     
+    info(autosaveFields, "VAL")
 }
 
 record(longin, "$(P)$(R)Blue_RBV") {
@@ -86,6 +130,7 @@ record(longout, "$(P)$(R)Blue") {
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))fillBlue")
     field(DRVL, "0")
     field(DRVH, "255")
+    info(autosaveFields, "VAL")
 }
 
 record(longin, "$(P)$(R)Green_RBV") {
@@ -100,6 +145,7 @@ record(longout, "$(P)$(R)Green") {
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))fillGreen")
     field(DRVL, "0")
     field(DRVH, "255")
+    info(autosaveFields, "VAL")
 }
 
 record(longin, "$(P)$(R)Red_RBV") {
@@ -114,6 +160,7 @@ record(longout, "$(P)$(R)Red") {
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))fillRed")
     field(DRVL, "0")
     field(DRVH, "255")
+    info(autosaveFields, "VAL")
 }
 
 

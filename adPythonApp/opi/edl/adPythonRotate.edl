@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 470
-y 154
+x 478
+y 258
 w 390
 h 820
 font "arial-bold-r-12.0"
@@ -30,9 +30,9 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 10
+x 5
 y 535
-w 370
+w 380
 h 280
 lineColor index 14
 fill
@@ -45,16 +45,17 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 40
-y 610
+x 20
+y 725
 w 110
-h 20
+h 30
 font "arial-bold-r-12.0"
 fgColor index 14
 bgColor index 3
 useDisplayBg
 value {
   "Rotation Centre"
+  "(-1=image centre)"
 }
 endObjectProperties
 
@@ -134,7 +135,7 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 40
+x 15
 y 550
 w 59
 h 20
@@ -153,8 +154,8 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 260
-y 580
+x 225
+y 595
 w 80
 h 20
 controlPv "$(P)$(R)Angle_RBV"
@@ -172,7 +173,7 @@ beginObjectProperties
 major 4
 minor 0
 release 0
-x 115
+x 90
 y 550
 w 105
 h 20
@@ -192,8 +193,8 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 180
-y 580
+x 145
+y 595
 w 80
 h 20
 controlPv "$(P)$(R)Angle"
@@ -210,8 +211,8 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 40
-y 580
+x 15
+y 595
 w 130
 h 20
 font "arial-bold-r-12.0"
@@ -229,8 +230,8 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 260
-y 630
+x 100
+y 760
 w 80
 h 20
 controlPv "$(P)$(R)CentreX_RBV"
@@ -248,9 +249,9 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 180
-y 630
-w 80
+x 40
+y 760
+w 60
 h 20
 controlPv "$(P)$(R)CentreX"
 fgColor index 25
@@ -266,16 +267,16 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 60
-y 630
-w 140
+x 20
+y 760
+w 25
 h 20
 font "arial-bold-r-12.0"
 fgColor index 14
 bgColor index 3
 useDisplayBg
 value {
-  "X (-1=image centre)"
+  "X"
 }
 endObjectProperties
 
@@ -285,8 +286,8 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 260
-y 655
+x 100
+y 785
 w 80
 h 20
 controlPv "$(P)$(R)CentreY_RBV"
@@ -304,9 +305,9 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 180
-y 655
-w 80
+x 40
+y 785
+w 60
 h 20
 controlPv "$(P)$(R)CentreY"
 fgColor index 25
@@ -322,16 +323,16 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 60
-y 655
-w 140
+x 20
+y 785
+w 25
 h 20
 font "arial-bold-r-12.0"
 fgColor index 14
 bgColor index 3
 useDisplayBg
 value {
-  "Y (-1=image centre)"
+  "Y"
 }
 endObjectProperties
 
@@ -341,9 +342,9 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 60
-y 705
-w 55
+x 215
+y 740
+w 45
 h 20
 font "arial-bold-r-12.0"
 fgColor index 14
@@ -360,9 +361,9 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 125
-y 705
-w 80
+x 255
+y 740
+w 60
 h 20
 controlPv "$(P)$(R)Red"
 fgColor index 25
@@ -378,9 +379,9 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 205
-y 705
-w 80
+x 315
+y 740
+w 60
 h 20
 controlPv "$(P)$(R)Red_RBV"
 fgColor index 16
@@ -397,9 +398,9 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 205
-y 730
-w 80
+x 315
+y 765
+w 60
 h 20
 controlPv "$(P)$(R)Green_RBV"
 fgColor index 16
@@ -416,9 +417,9 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 125
-y 730
-w 80
+x 255
+y 765
+w 60
 h 20
 controlPv "$(P)$(R)Green"
 fgColor index 25
@@ -434,9 +435,9 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 60
-y 730
-w 55
+x 215
+y 765
+w 45
 h 20
 font "arial-bold-r-12.0"
 fgColor index 14
@@ -453,9 +454,9 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 205
-y 755
-w 80
+x 315
+y 790
+w 60
 h 20
 controlPv "$(P)$(R)Blue_RBV"
 fgColor index 16
@@ -472,9 +473,9 @@ beginObjectProperties
 major 10
 minor 0
 release 0
-x 125
-y 755
-w 80
+x 255
+y 790
+w 60
 h 20
 controlPv "$(P)$(R)Blue"
 fgColor index 25
@@ -490,9 +491,9 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 60
-y 755
-w 55
+x 215
+y 790
+w 45
 h 20
 font "arial-bold-r-12.0"
 fgColor index 14
@@ -509,9 +510,9 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 40
-y 685
-w 110
+x 215
+y 720
+w 70
 h 20
 font "arial-bold-r-12.0"
 fgColor index 14
@@ -520,5 +521,124 @@ useDisplayBg
 value {
   "Fill Colour"
 }
+endObjectProperties
+
+# (Textentry)
+object TextentryClass
+beginObjectProperties
+major 10
+minor 0
+release 0
+x 120
+y 670
+w 80
+h 20
+controlPv "$(P)$(R)AngleLinkScale"
+fgColor index 25
+fgAlarm
+bgColor index 3
+fill
+font "arial-bold-r-12.0"
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 50
+y 670
+w 70
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Link Scale"
+}
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 220
+y 670
+w 70
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Link Offset"
+}
+endObjectProperties
+
+# (Textentry)
+object TextentryClass
+beginObjectProperties
+major 10
+minor 0
+release 0
+x 290
+y 670
+w 80
+h 20
+controlPv "$(P)$(R)AngleLinkOffset"
+fgColor index 25
+fgAlarm
+bgColor index 3
+fill
+font "arial-bold-r-12.0"
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 40
+y 620
+w 125
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Angle from DB link"
+}
+endObjectProperties
+
+# (Text Control)
+object activeXTextDspClass
+beginObjectProperties
+major 4
+minor 6
+release 0
+x 40
+y 645
+w 335
+h 15
+controlPv "$(P)$(R)AngleLink.DOL"
+font "arial-bold-r-12.0"
+fgColor index 25
+bgColor index 3
+useDisplayBg
+editable
+autoHeight
+motifWidget
+limitsFromDb
+nullColor index 25
+updatePvOnDrop
+useHexPrefix
+newPos
+objType "controls"
 endObjectProperties
 
